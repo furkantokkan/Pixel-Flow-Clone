@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f83eb34210b401e4fb0fe139624e9965
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/Assets/Prefab/tree.prefab
+  uploadId: 797180

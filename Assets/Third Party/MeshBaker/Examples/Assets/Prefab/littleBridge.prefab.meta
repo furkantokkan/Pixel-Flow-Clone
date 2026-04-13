@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 30a3a168cc8046045b47a4f8a49c65cf
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/Assets/Prefab/littleBridge.prefab
+  uploadId: 797180

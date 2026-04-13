@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 138a07f79b31cd347a91a7ba2300aa8c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/Assets/Prefab/floatingPlatform.prefab
+  uploadId: 797180

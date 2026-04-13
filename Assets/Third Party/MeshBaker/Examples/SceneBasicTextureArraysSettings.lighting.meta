@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6899631121d60d041a1af5cac16d1b4d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/SceneBasicTextureArraysSettings.lighting
+  uploadId: 797180

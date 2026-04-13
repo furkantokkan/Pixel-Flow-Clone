@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 5f47c7c5de4f2ce4dbe9606dc849868f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154253
+  packageName: Pixel Shooter 3D | Jam Template + Editor
+  packageVersion: 2.0
+  assetPath: Assets/Pixel Shooter 3D/Prefabs/Player.prefab
+  uploadId: 885442

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0438d36496d8e5e478fe1ad5b1244a90
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/MultipleMaterials/Prefabs/Bush.prefab
+  uploadId: 797180

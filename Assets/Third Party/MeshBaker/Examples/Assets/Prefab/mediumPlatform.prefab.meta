@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fd60ed89d43fbe34e9dfb208085daf7a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/Assets/Prefab/mediumPlatform.prefab
+  uploadId: 797180

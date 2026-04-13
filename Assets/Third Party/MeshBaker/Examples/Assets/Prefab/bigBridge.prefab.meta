@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 191d7abdc13b3c3459ba270a0c8a0c5b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/Assets/Prefab/bigBridge.prefab
+  uploadId: 797180

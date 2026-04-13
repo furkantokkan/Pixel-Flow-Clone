@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a87fe5eeb1adb9549a284fc1b9a8ae1a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 31895
+  packageName: Mesh Baker Free
+  packageVersion: 3.40.1
+  assetPath: Assets/MeshBaker/Examples/SceneMultipleMaterialsSettings.lighting
+  uploadId: 797180
