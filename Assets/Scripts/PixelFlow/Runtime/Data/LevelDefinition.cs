@@ -8,9 +8,9 @@ namespace PixelFlow.Runtime.Data
     public sealed class LevelDefinition : ScriptableObject
     {
         [SerializeField] private Vector2Int gridSize = new(12, 12);
-        [SerializeField] private PixelFlowTheme theme;
+        [SerializeField] private Theme theme;
         [SerializeField] private Texture2D sourceImage;
-        [SerializeField] private PixelFlowBlockData blockData;
+        [SerializeField] private BlockData blockData;
         [SerializeField] private ImageImportSettings importSettings = new();
         [SerializeField] private List<PixelCellData> pixelCells = new();
         [SerializeField] private List<WaitingSlotData> waitingSlots = new();
@@ -19,9 +19,9 @@ namespace PixelFlow.Runtime.Data
         [SerializeField] private ConveyorBakeData conveyorBakeData = new();
 
         public Vector2Int GridSize => gridSize;
-        public PixelFlowTheme Theme => theme;
+        public Theme Theme => theme;
         public Texture2D SourceImage => sourceImage;
-        public PixelFlowBlockData BlockData => blockData;
+        public BlockData BlockData => blockData;
         public ImageImportSettings ImportSettings => importSettings;
         public IReadOnlyList<PixelCellData> PixelCells => pixelCells;
         public IReadOnlyList<WaitingSlotData> WaitingSlots => waitingSlots;
@@ -55,9 +55,9 @@ namespace PixelFlow.Runtime.Data
 
         public void EditorApply(
             PigColor[,] displayGrid,
-            PixelFlowTheme selectedTheme,
+            Theme selectedTheme,
             Texture2D newSourceImage,
-            PixelFlowBlockData selectedBlockData,
+            BlockData selectedBlockData,
             ImageImportSettings imageSettings,
             IReadOnlyList<PigQueueEntry> queueEntries,
             PigQueueGenerationSettings queueSettings)

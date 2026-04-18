@@ -106,8 +106,8 @@ namespace PixelFlow.Runtime.Data
         }
 
         public static List<PigQueueEntry> Generate(
-            IReadOnlyList<PixelFlowPlacedObjectData> placedObjects,
-            PixelFlowLevelDatabase database,
+            IReadOnlyList<PlacedObjectData> placedObjects,
+            LevelDatabase database,
             PigQueueGenerationSettings settings)
         {
             var result = new List<PigQueueEntry>();
@@ -177,8 +177,8 @@ namespace PixelFlow.Runtime.Data
         }
 
         private static Dictionary<PigColor, int> CountBlocksByColor(
-            IReadOnlyList<PixelFlowPlacedObjectData> placedObjects,
-            PixelFlowLevelDatabase database)
+            IReadOnlyList<PlacedObjectData> placedObjects,
+            LevelDatabase database)
         {
             var counts = new Dictionary<PigColor, int>();
 
@@ -187,7 +187,7 @@ namespace PixelFlow.Runtime.Data
                 var placedObject = placedObjects[i];
                 var definition = database.FindPlaceable(placedObject);
                 if (definition == null
-                    || definition.Kind != PixelFlowPlaceableKind.Pig
+                    || definition.Kind != PlaceableKind.Pig
                     || definition.Color == PigColor.None)
                 {
                     continue;
