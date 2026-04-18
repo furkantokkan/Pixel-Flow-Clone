@@ -1,0 +1,565 @@
+using System.Collections.Generic;
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+namespace Core.Runtime.ColorAtlas
+{
+    [ExecuteAlways]
+    [DisallowMultipleComponent]
+    public class AtlasColorController : MonoBehaviour
+    {
+        [SerializeField] private BaseColor baseColor = BaseColor.Pink;
+        [FormerlySerializedAs("targetRenderer")]
+        [SerializeField, HideInInspector] private Renderer legacyTargetRenderer;
+        [FormerlySerializedAs("additionalRenderers")]
+        [SerializeField] private Renderer[] renderers;
+        [SerializeField, HideInInspector] private string currentColorInfo;
+        [SerializeField, HideInInspector] private int controlledRendererCount;
+        [FormerlySerializedAs("useOutline")]
+        [SerializeField] private bool enableOutline;
+
+        private MaterialPropertyBlock propertyBlock;
+        private Renderer[] controlledRenderers;
+        private bool isDirty = true;
+#if UNITY_EDITOR
+        private readonly Dictionary<Renderer, Material[]> editorOriginalSharedMaterials = new();
+        private readonly HashSet<Material> editorOwnedMaterials = new();
+#endif
+
+        private static readonly int ColorIndexProperty = Shader.PropertyToID("_ColorIndex");
+        private static readonly int ToneIndexProperty = Shader.PropertyToID("_ToneIndex");
+        private static readonly int EnableOutlineProperty = Shader.PropertyToID("_EnableOutline");
+        private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorProperty = Shader.PropertyToID("_Color");
+        private static readonly int EmissionColorProperty = Shader.PropertyToID("_EmissionColor");
+
+        public BaseColor BaseColor => baseColor;
+        public bool EnableOutline => enableOutline;
+
+        protected virtual void Awake()
+        {
+            UpgradeLegacyRendererData();
+            CacheRenderers(true);
+            ApplyColorSettings();
+        }
+
+        protected virtual void OnEnable()
+        {
+            isDirty = true;
+            UpgradeLegacyRendererData();
+            CacheRenderers(false);
+            ApplyColorSettings();
+        }
+
+        protected virtual void Start()
+        {
+            UpgradeLegacyRendererData();
+            CacheRenderers(true);
+            ApplyColorSettings();
+        }
+
+        protected virtual void OnDisable()
+        {
+#if UNITY_EDITOR
+            RestoreEditorMaterialSettings();
+#endif
+        }
+
+        protected virtual void OnDestroy()
+        {
+#if UNITY_EDITOR
+            RestoreEditorMaterialSettings();
+#endif
+        }
+
+        private void LateUpdate()
+        {
+            if (isDirty)
+            {
+                ApplyColorSettings();
+            }
+        }
+
+        public void SetColor(BaseColor color)
+        {
+            if (baseColor == color)
+            {
+                return;
+            }
+
+            baseColor = color;
+            isDirty = true;
+            ApplyColorSettings();
+        }
+
+        public void SetColor(AtlasColor color)
+        {
+            SetColor(color.baseColor);
+        }
+
+        public void SetOutline(bool enabled)
+        {
+            if (enableOutline == enabled)
+            {
+                return;
+            }
+
+            enableOutline = enabled;
+            isDirty = true;
+            ApplyColorSettings();
+        }
+
+        public AtlasColor GetColor()
+        {
+            return new AtlasColor(baseColor, ColorTone.Pastel);
+        }
+
+        [ContextMenu("Fill Renderers")]
+        private void FillRenderers()
+        {
+            UpgradeLegacyRendererData();
+            renderers = CollectDiscoveredRenderers();
+            isDirty = true;
+            CacheRenderers(true);
+            ApplyColorSettings();
+
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+#endif
+        }
+
+        private void UpgradeLegacyRendererData()
+        {
+            if (legacyTargetRenderer == null)
+            {
+                return;
+            }
+
+            if (renderers == null || renderers.Length == 0)
+            {
+                renderers = new[] { legacyTargetRenderer };
+            }
+            else
+            {
+                var alreadyExists = false;
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    if (renderers[i] == legacyTargetRenderer)
+                    {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyExists)
+                {
+                    var expanded = new Renderer[renderers.Length + 1];
+                    for (int i = 0; i < renderers.Length; i++)
+                    {
+                        expanded[i] = renderers[i];
+                    }
+
+                    expanded[renderers.Length] = legacyTargetRenderer;
+                    renderers = expanded;
+                }
+            }
+
+            legacyTargetRenderer = null;
+        }
+
+        private void CacheRenderers(bool forceRefresh)
+        {
+            if (!forceRefresh
+                && controlledRenderers != null
+                && controlledRenderers.Length > 0)
+            {
+                return;
+            }
+
+            var rendererCount = 0;
+            Renderer[] discoveredRenderers = GetComponentsInChildren<Renderer>(true);
+            controlledRenderers = new Renderer[discoveredRenderers.Length + (renderers?.Length ?? 0)];
+
+            if (renderers != null)
+            {
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    TryAddRenderer(renderers[i], ref rendererCount);
+                }
+            }
+
+            for (int i = 0; i < discoveredRenderers.Length; i++)
+            {
+                TryAddRenderer(discoveredRenderers[i], ref rendererCount);
+            }
+
+            if (rendererCount != controlledRenderers.Length)
+            {
+                var trimmedRenderers = new Renderer[rendererCount];
+                for (int i = 0; i < rendererCount; i++)
+                {
+                    trimmedRenderers[i] = controlledRenderers[i];
+                }
+
+                controlledRenderers = trimmedRenderers;
+            }
+
+            controlledRendererCount = rendererCount;
+        }
+
+        private void TryAddRenderer(Renderer rendererCandidate, ref int rendererCount)
+        {
+            if (!IsValidTargetRenderer(rendererCandidate))
+            {
+                return;
+            }
+
+            for (int i = 0; i < rendererCount; i++)
+            {
+                if (controlledRenderers[i] == rendererCandidate)
+                {
+                    return;
+                }
+            }
+
+            controlledRenderers[rendererCount] = rendererCandidate;
+            rendererCount++;
+        }
+
+        private static bool IsValidTargetRenderer(Renderer rendererCandidate)
+        {
+            return rendererCandidate != null
+                && rendererCandidate.GetComponent<TMP_Text>() == null;
+        }
+
+        private void ApplyColorSettings()
+        {
+            CacheRenderers(false);
+            if (!isDirty || controlledRenderers == null || controlledRenderers.Length == 0)
+            {
+                return;
+            }
+
+            #if UNITY_EDITOR
+            if (ShouldUseEditorMaterialMode())
+            {
+                ApplyEditorMaterialSettings();
+                isDirty = false;
+                return;
+            }
+
+            RestoreEditorMaterialSettings();
+            #endif
+
+            ApplyRuntimePropertyBlockSettings();
+            isDirty = false;
+        }
+
+        private void ApplyRuntimePropertyBlockSettings()
+        {
+            propertyBlock ??= new MaterialPropertyBlock();
+            propertyBlock.Clear();
+            propertyBlock.SetFloat(ColorIndexProperty, (float)baseColor);
+            propertyBlock.SetFloat(ToneIndexProperty, (float)ColorTone.Pastel);
+            propertyBlock.SetFloat(EnableOutlineProperty, enableOutline ? 1f : 0f);
+
+            var appliedRendererCount = 0;
+            for (int i = 0; i < controlledRenderers.Length; i++)
+            {
+                var rendererCandidate = controlledRenderers[i];
+                if (!IsValidTargetRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                rendererCandidate.SetPropertyBlock(propertyBlock);
+                appliedRendererCount++;
+            }
+
+            controlledRendererCount = appliedRendererCount;
+            currentColorInfo = $"{baseColor}_{ColorTone.Pastel} Outline:{enableOutline} Renderers:{appliedRendererCount}";
+        }
+
+#if UNITY_EDITOR
+        private void ApplyEditorMaterialSettings()
+        {
+            var appliedRendererCount = 0;
+            var fallbackColor = ResolveEditorPreviewColor(baseColor);
+
+            for (int i = 0; i < controlledRenderers.Length; i++)
+            {
+                var rendererCandidate = controlledRenderers[i];
+                if (!IsValidTargetRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                var sourceMaterials = rendererCandidate.sharedMaterials;
+                if (sourceMaterials == null || sourceMaterials.Length == 0)
+                {
+                    continue;
+                }
+
+                if (!editorOriginalSharedMaterials.ContainsKey(rendererCandidate))
+                {
+                    editorOriginalSharedMaterials[rendererCandidate] = (Material[])sourceMaterials.Clone();
+                }
+
+                var editorMaterials = new Material[sourceMaterials.Length];
+                var requiresAssignment = false;
+
+                for (int materialIndex = 0; materialIndex < sourceMaterials.Length; materialIndex++)
+                {
+                    var sourceMaterial = sourceMaterials[materialIndex];
+                    if (sourceMaterial == null)
+                    {
+                        continue;
+                    }
+
+                    Material materialInstance;
+                    if (editorOwnedMaterials.Contains(sourceMaterial))
+                    {
+                        materialInstance = sourceMaterial;
+                    }
+                    else
+                    {
+                        materialInstance = new Material(sourceMaterial)
+                        {
+                            hideFlags = HideFlags.HideAndDontSave
+                        };
+                        editorOwnedMaterials.Add(materialInstance);
+                        requiresAssignment = true;
+                    }
+
+                    ApplyEditorMaterialColorSettings(materialInstance, fallbackColor);
+                    editorMaterials[materialIndex] = materialInstance;
+                }
+
+                if (requiresAssignment)
+                {
+                    rendererCandidate.sharedMaterials = editorMaterials;
+                }
+
+                rendererCandidate.SetPropertyBlock(null);
+                appliedRendererCount++;
+            }
+
+            controlledRendererCount = appliedRendererCount;
+            currentColorInfo = $"{baseColor}_{ColorTone.Pastel} EditorMaterial Renderers:{appliedRendererCount}";
+        }
+
+        private void ApplyEditorMaterialColorSettings(Material material, Color fallbackColor)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            ApplyEditorPreviewShaderIfNeeded(material);
+
+            if (material.HasProperty(ColorIndexProperty))
+            {
+                material.SetFloat(ColorIndexProperty, (float)baseColor);
+            }
+
+            if (material.HasProperty(ToneIndexProperty))
+            {
+                material.SetFloat(ToneIndexProperty, (float)ColorTone.Pastel);
+            }
+
+            if (material.HasProperty(EnableOutlineProperty))
+            {
+                material.SetFloat(EnableOutlineProperty, enableOutline ? 1f : 0f);
+            }
+
+            if (material.HasProperty(BaseColorProperty))
+            {
+                material.SetColor(BaseColorProperty, fallbackColor);
+            }
+
+            if (material.HasProperty(ColorProperty))
+            {
+                material.SetColor(ColorProperty, fallbackColor);
+            }
+
+            if (material.HasProperty(EmissionColorProperty))
+            {
+                material.SetColor(EmissionColorProperty, Color.black);
+            }
+        }
+
+        private void RestoreEditorMaterialSettings()
+        {
+            if (editorOriginalSharedMaterials.Count == 0 && editorOwnedMaterials.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pair in editorOriginalSharedMaterials)
+            {
+                if (pair.Key == null)
+                {
+                    continue;
+                }
+
+                pair.Key.sharedMaterials = pair.Value;
+                pair.Key.SetPropertyBlock(null);
+            }
+
+            foreach (var material in editorOwnedMaterials)
+            {
+                if (material != null)
+                {
+                    DestroyImmediate(material);
+                }
+            }
+
+            editorOriginalSharedMaterials.Clear();
+            editorOwnedMaterials.Clear();
+        }
+
+        private bool ShouldUseEditorMaterialMode()
+        {
+            return !Application.isPlaying
+                && gameObject.scene.IsValid()
+                && !EditorUtility.IsPersistent(this);
+        }
+
+        private static void ApplyEditorPreviewShaderIfNeeded(Material material)
+        {
+            if (material == null
+                || material.shader == null
+                || !string.Equals(material.shader.name, "Core/ColorAtlasPicker", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var previewShader = ResolveEditorPreviewShader();
+            if (previewShader != null && previewShader != material.shader)
+            {
+                material.shader = previewShader;
+            }
+        }
+
+        private static Shader ResolveEditorPreviewShader()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader != null)
+            {
+                return shader;
+            }
+
+            shader = Shader.Find("Standard");
+            if (shader != null)
+            {
+                return shader;
+            }
+
+            shader = Shader.Find("Unlit/Color");
+            if (shader != null)
+            {
+                return shader;
+            }
+
+            return Shader.Find("Sprites/Default");
+        }
+
+        private static Color ResolveEditorPreviewColor(BaseColor color)
+        {
+            return color switch
+            {
+                BaseColor.Black => new Color32(18, 18, 20, 255),
+                BaseColor.Red => new Color32(255, 72, 72, 255),
+                BaseColor.Pink => new Color32(255, 111, 190, 255),
+                BaseColor.Purple => new Color32(154, 110, 244, 255),
+                BaseColor.Blue => new Color32(89, 151, 255, 255),
+                BaseColor.Cyan => new Color32(46, 194, 204, 255),
+                BaseColor.Green => new Color32(93, 215, 110, 255),
+                BaseColor.Yellow => new Color32(255, 216, 78, 255),
+                BaseColor.Orange => new Color32(255, 156, 58, 255),
+                _ => new Color32(184, 184, 188, 255),
+            };
+        }
+#endif
+
+        private Renderer[] CollectDiscoveredRenderers()
+        {
+            Renderer[] discoveredRenderers = GetComponentsInChildren<Renderer>(true);
+            Renderer[] collectedRenderers = new Renderer[discoveredRenderers.Length];
+            int rendererCount = 0;
+
+            for (int i = 0; i < discoveredRenderers.Length; i++)
+            {
+                Renderer rendererCandidate = discoveredRenderers[i];
+                if (!IsValidTargetRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                bool alreadyAdded = false;
+                for (int j = 0; j < rendererCount; j++)
+                {
+                    if (collectedRenderers[j] == rendererCandidate)
+                    {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+
+                if (alreadyAdded)
+                {
+                    continue;
+                }
+
+                collectedRenderers[rendererCount] = rendererCandidate;
+                rendererCount++;
+            }
+
+            if (rendererCount == 0)
+            {
+                return System.Array.Empty<Renderer>();
+            }
+
+            if (rendererCount == collectedRenderers.Length)
+            {
+                return collectedRenderers;
+            }
+
+            Renderer[] trimmedRenderers = new Renderer[rendererCount];
+            for (int i = 0; i < rendererCount; i++)
+            {
+                trimmedRenderers[i] = collectedRenderers[i];
+            }
+
+            return trimmedRenderers;
+        }
+
+        protected virtual void OnValidate()
+        {
+            isDirty = true;
+            UpgradeLegacyRendererData();
+            CacheRenderers(true);
+            ApplyColorSettings();
+        }
+    }
+
+    public sealed class ReadOnlyAttribute : PropertyAttribute { }
+
+#if UNITY_EDITOR
+    [UnityEditor.CustomPropertyDrawer(typeof(ReadOnlyAttribute))]
+    public sealed class ReadOnlyDrawer : UnityEditor.PropertyDrawer
+    {
+        public override void OnGUI(Rect position, UnityEditor.SerializedProperty property, GUIContent label)
+        {
+            GUI.enabled = false;
+            UnityEditor.EditorGUI.PropertyField(position, property, label, true);
+            GUI.enabled = true;
+        }
+    }
+#endif
+}
