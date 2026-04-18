@@ -333,6 +333,8 @@ namespace PixelFlow.Editor.LevelEditing
                 var currentColumns = workingImportSettings.TargetColumns;
                 var currentRows = workingImportSettings.TargetRows;
                 var currentFitMode = workingImportSettings.FitMode;
+                var currentBoardFill = workingImportSettings.BoardFill;
+                var currentBoardFillOverridden = workingImportSettings.BoardFillOverridden;
                 var currentImageScale = workingImportSettings.ImageScale;
                 var currentAlphaThreshold = workingImportSettings.AlphaThreshold;
                 var currentCropTransparentBorders = workingImportSettings.CropTransparentBorders;
@@ -342,6 +344,7 @@ namespace PixelFlow.Editor.LevelEditing
                 var nextColumns = EditorGUILayout.IntField("Columns", currentColumns);
                 var nextRows = EditorGUILayout.IntField("Rows", currentRows);
                 var nextFitMode = (ImageFitMode)EditorGUILayout.EnumPopup("Fit Mode", workingImportSettings.FitMode);
+                var nextBoardFill = EditorGUILayout.Slider("Board Fill", currentBoardFill, 0.4f, 1f);
                 float nextImageScale;
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -358,6 +361,10 @@ namespace PixelFlow.Editor.LevelEditing
                     workingImportSettings.TargetColumns = nextColumns;
                     workingImportSettings.TargetRows = nextRows;
                     workingImportSettings.FitMode = nextFitMode;
+                    if (!Mathf.Approximately(currentBoardFill, nextBoardFill))
+                    {
+                        workingImportSettings.BoardFill = nextBoardFill;
+                    }
                     workingImportSettings.ImageScale = nextImageScale;
                     workingImportSettings.AlphaThreshold = nextAlpha;
                     workingImportSettings.CropTransparentBorders = nextCrop;
@@ -416,11 +423,27 @@ namespace PixelFlow.Editor.LevelEditing
                     EditorGUILayout.LabelField($"Source Resolution: {sourceImage.width} x {sourceImage.height}", EditorStyles.miniLabel);
                     EditorGUILayout.LabelField($"Target Grid Resolution: {workingImportSettings.TargetColumns} x {workingImportSettings.TargetRows}", EditorStyles.miniLabel);
                     EditorGUILayout.LabelField($"Scale Preview Resolution: {scaledSourceResolution.x} x {scaledSourceResolution.y}", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField($"Smart Fit Board Fill: {workingImportSettings.BoardFill:F2}", EditorStyles.miniLabel);
+                    if (selectedLevelIndex >= 0)
+                    {
+                        var boardFillScopeLabel = currentBoardFillOverridden
+                            ? "Board Fill currently overrides the default for this level. Save Level persists it."
+                            : "Board Fill is using the default 0.63 for this level. Moving the slider creates a per-level override when you click Save Level.";
+                        EditorGUILayout.LabelField(boardFillScopeLabel, EditorStyles.miniLabel);
+                    }
                     EditorGUILayout.LabelField("Columns and rows can be edited directly. Changing Detail Scale also updates the sampled resolution and regenerates ammo from the new pixel count.", EditorStyles.wordWrappedMiniLabel);
+                    EditorGUILayout.LabelField("Lower Board Fill values shrink the generated board parent for dense images so the art stays away from the conveyor border.", EditorStyles.wordWrappedMiniLabel);
                     DrawSourceImagePreview();
                 }
                 else
                 {
+                    if (selectedLevelIndex >= 0)
+                    {
+                        var boardFillScopeLabel = currentBoardFillOverridden
+                            ? "Board Fill currently overrides the default for this level. Save Level persists it."
+                            : "Board Fill is using the default 0.63 for this level. Moving the slider creates a per-level override when you click Save Level.";
+                        EditorGUILayout.LabelField(boardFillScopeLabel, EditorStyles.miniLabel);
+                    }
                     EditorGUILayout.LabelField("Columns and rows define the editable grid resolution.", EditorStyles.wordWrappedMiniLabel);
                 }
 
@@ -814,6 +837,8 @@ namespace PixelFlow.Editor.LevelEditing
 
         private void GenerateTemporaryTestLevel()
         {
+            CleanupTemporaryTestLevel();
+
             if (selectedDatabase == null)
             {
                 statusMessage = "Assign a level database before generating a temporary test level.";
@@ -832,8 +857,6 @@ namespace PixelFlow.Editor.LevelEditing
                 sceneContext.InstallBindings();
                 environment = sceneContext.EnsureEnvironment();
             }
-
-            CleanupTemporaryTestLevel();
 
             if (workingPigQueue == null || workingPigQueue.Count == 0)
             {
@@ -969,7 +992,8 @@ namespace PixelFlow.Editor.LevelEditing
                 selectedDatabase,
                 workingGridSize,
                 cellSpacing,
-                preserveFullGridBounds: true);
+                preserveFullGridBounds: true,
+                boardFill: workingImportSettings.BoardFill);
             var baseBoardScale = boardRoot.localScale;
             boardRoot.localScale = Vector3.Scale(baseBoardScale, Vector3.one * layout.RootScale);
             var generatedBlockCount = 0;
@@ -1441,11 +1465,25 @@ namespace PixelFlow.Editor.LevelEditing
 
         private void CleanupTemporaryTestLevel()
         {
-            var transforms = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var sceneContexts = Resources.FindObjectsOfTypeAll<PixelFlowSceneContext>();
+            for (int i = 0; i < sceneContexts.Length; i++)
+            {
+                var sceneContext = sceneContexts[i];
+                if (sceneContext == null
+                    || EditorUtility.IsPersistent(sceneContext)
+                    || !sceneContext.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
+
+                PixelFlowLevelPreviewService.ClearPreview(sceneContext, sceneContext.Theme);
+            }
+
+            var transforms = Resources.FindObjectsOfTypeAll<Transform>();
             for (int i = transforms.Length - 1; i >= 0; i--)
             {
                 var candidate = transforms[i];
-                if (!IsTemporaryTestLevelRoot(candidate))
+                if (!IsTemporaryTestLevelRoot(candidate) && !IsTemporaryTestChildRoot(candidate))
                 {
                     continue;
                 }
@@ -1457,15 +1495,43 @@ namespace PixelFlow.Editor.LevelEditing
         private static bool IsTemporaryTestLevelRoot(Transform candidate)
         {
             if (candidate == null
-                || candidate.name != TemporaryTestLevelRootName
-                || candidate.parent == null
-                || (candidate.hideFlags & HideFlags.DontSaveInEditor) == 0)
+                || EditorUtility.IsPersistent(candidate)
+                || candidate.name != TemporaryTestLevelRootName)
             {
                 return false;
             }
 
-            return candidate.parent.GetComponent<PixelFlowSceneContext>() != null
-                || candidate.parent.GetComponent<PixelFlowEnvironmentContext>() != null;
+            if (!candidate.gameObject.scene.IsValid())
+            {
+                return false;
+            }
+
+            return (candidate.hideFlags & HideFlags.DontSaveInEditor) != 0
+                || candidate.Find(TemporaryTestBoardRootName) != null
+                || candidate.Find(TemporaryTestDeckRootName) != null;
+        }
+
+        private static bool IsTemporaryTestChildRoot(Transform candidate)
+        {
+            if (candidate == null
+                || EditorUtility.IsPersistent(candidate)
+                || !candidate.gameObject.scene.IsValid())
+            {
+                return false;
+            }
+
+            if (candidate.name != TemporaryTestBoardRootName
+                && candidate.name != TemporaryTestDeckRootName)
+            {
+                return false;
+            }
+
+            if ((candidate.hideFlags & HideFlags.DontSaveInEditor) != 0)
+            {
+                return true;
+            }
+
+            return candidate.parent != null && candidate.parent.name == TemporaryTestLevelRootName;
         }
 
         private void DrawCell(Rect rect, Vector2Int gridPosition, int placementIndex, bool isRoot)

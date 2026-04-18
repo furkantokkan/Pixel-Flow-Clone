@@ -59,6 +59,7 @@ namespace PixelFlow.Runtime.Visuals
         private void EnsureReferences()
         {
             atlasColorTarget ??= GetComponent<PixelFlowAtlasColorTarget>();
+            atlasColorTarget ??= GetComponentInChildren<PixelFlowAtlasColorTarget>(true);
             ammoText ??= GetComponentInChildren<TMP_Text>(true);
             trayRoot ??= ResolveTrayRoot();
         }

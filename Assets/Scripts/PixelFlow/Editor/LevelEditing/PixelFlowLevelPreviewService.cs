@@ -69,7 +69,9 @@ namespace PixelFlow.Editor.LevelEditing
                 environment,
                 previewRoot.transform,
                 displayGrid,
-                cellSpacing);
+                cellSpacing,
+                preserveFullGridBounds: true,
+                boardFill: settings.BoardFill);
             previewRoot.transform.localScale = Vector3.one * layout.RootScale;
 
             for (int x = 0; x < width; x++)
@@ -195,6 +197,8 @@ namespace PixelFlow.Editor.LevelEditing
         private const float MinimumCellSpacing = 0.01f;
         private const float MinimumBoardPadding = 0.15f;
         private const float RelativeBoardPadding = 0.08f;
+        private const float MinimumBoardFill = 0.4f;
+        private const float SmartFitShrinkStartOccupancy = 0.78f;
 
         internal readonly struct Layout
         {
@@ -234,7 +238,8 @@ namespace PixelFlow.Editor.LevelEditing
             PixelFlowLevelDatabase database,
             Vector2Int fallbackGridSize,
             float baseCellSpacing,
-            bool preserveFullGridBounds = false)
+            bool preserveFullGridBounds = false,
+            float boardFill = 1f)
         {
             ResolvePlacedObjectBounds(
                 placedObjects,
@@ -245,7 +250,30 @@ namespace PixelFlow.Editor.LevelEditing
                 out var maxX,
                 out var minY,
                 out var maxY);
-            return ResolveLayout(environment, referenceSpace, minX, maxX, minY, maxY, baseCellSpacing);
+
+            ResolvePlacedObjectBounds(
+                placedObjects,
+                database,
+                fallbackGridSize,
+                preserveFullGridBounds: false,
+                out var occupiedMinX,
+                out var occupiedMaxX,
+                out var occupiedMinY,
+                out var occupiedMaxY);
+
+            return ResolveLayout(
+                environment,
+                referenceSpace,
+                minX,
+                maxX,
+                minY,
+                maxY,
+                occupiedMinX,
+                occupiedMaxX,
+                occupiedMinY,
+                occupiedMaxY,
+                baseCellSpacing,
+                boardFill);
         }
 
         public static Layout ResolveDisplayGridLayout(
@@ -253,10 +281,24 @@ namespace PixelFlow.Editor.LevelEditing
             Transform referenceSpace,
             PigColor[,] displayGrid,
             float baseCellSpacing,
-            bool preserveFullGridBounds = true)
+            bool preserveFullGridBounds = true,
+            float boardFill = 1f)
         {
             ResolveDisplayGridBounds(displayGrid, preserveFullGridBounds, out var minX, out var maxX, out var minY, out var maxY);
-            return ResolveLayout(environment, referenceSpace, minX, maxX, minY, maxY, baseCellSpacing);
+            ResolveDisplayGridBounds(displayGrid, preserveFullGridBounds: false, out var occupiedMinX, out var occupiedMaxX, out var occupiedMinY, out var occupiedMaxY);
+            return ResolveLayout(
+                environment,
+                referenceSpace,
+                minX,
+                maxX,
+                minY,
+                maxY,
+                occupiedMinX,
+                occupiedMaxX,
+                occupiedMinY,
+                occupiedMaxY,
+                baseCellSpacing,
+                boardFill);
         }
 
         private static Layout ResolveLayout(
@@ -266,7 +308,12 @@ namespace PixelFlow.Editor.LevelEditing
             int maxX,
             int minY,
             int maxY,
-            float baseCellSpacing)
+            int occupiedMinX,
+            int occupiedMaxX,
+            int occupiedMinY,
+            int occupiedMaxY,
+            float baseCellSpacing,
+            float boardFill)
         {
             var widthCells = Mathf.Max(1, maxX - minX + 1);
             var heightCells = Mathf.Max(1, maxY - minY + 1);
@@ -282,9 +329,44 @@ namespace PixelFlow.Editor.LevelEditing
                 resolvedRootScale = Mathf.Max(0.01f, Mathf.Min(1f, Mathf.Min(scaleX, scaleY)));
             }
 
+            var occupiedWidthCells = Mathf.Max(1, occupiedMaxX - occupiedMinX + 1);
+            var occupiedHeightCells = Mathf.Max(1, occupiedMaxY - occupiedMinY + 1);
+            resolvedRootScale *= ResolveSmartFitScale(
+                widthCells,
+                heightCells,
+                occupiedWidthCells,
+                occupiedHeightCells,
+                boardFill);
+
             var centerX = (minX + maxX) * 0.5f;
             var centerY = (minY + maxY) * 0.5f;
             return new Layout(resolvedCellSpacing, centerX, centerY, resolvedRootScale);
+        }
+
+        private static float ResolveSmartFitScale(
+            int layoutWidthCells,
+            int layoutHeightCells,
+            int occupiedWidthCells,
+            int occupiedHeightCells,
+            float boardFill)
+        {
+            var clampedBoardFill = Mathf.Clamp(boardFill, MinimumBoardFill, 1f);
+            if (clampedBoardFill >= 0.999f)
+            {
+                return 1f;
+            }
+
+            if (layoutWidthCells <= 0 || layoutHeightCells <= 0)
+            {
+                return 1f;
+            }
+
+            var occupancyX = Mathf.Clamp01(occupiedWidthCells / (float)layoutWidthCells);
+            var occupancyY = Mathf.Clamp01(occupiedHeightCells / (float)layoutHeightCells);
+            var dominantOccupancy = Mathf.Max(occupancyX, occupancyY);
+            var shrinkT = Mathf.InverseLerp(SmartFitShrinkStartOccupancy, 1f, dominantOccupancy);
+            shrinkT = Mathf.SmoothStep(0f, 1f, shrinkT);
+            return Mathf.Lerp(1f, clampedBoardFill, shrinkT);
         }
 
         private static void ResolvePlacedObjectBounds(

@@ -46,6 +46,11 @@ namespace PixelFlow.Runtime.Data
     [Serializable]
     public sealed class ImageImportSettings
     {
+        private const float MinimumBoardFill = 0.4f;
+        private const float MaximumBoardFill = 1f;
+        private const float DefaultBoardFill = 0.63f;
+        private const float BoardFillStep = 0.01f;
+
         [Min(1)]
         [SerializeField] private int targetColumns = 12;
 
@@ -57,6 +62,10 @@ namespace PixelFlow.Runtime.Data
 
         [SerializeField] private bool cropTransparentBorders = true;
         [SerializeField] private ImageFitMode fitMode = ImageFitMode.Contain;
+
+        [Range(MinimumBoardFill, MaximumBoardFill)]
+        [SerializeField] private float boardFill = DefaultBoardFill;
+        [SerializeField] private bool boardFillOverridden;
         
         [Range(0.01f, 0.2f)]
         [SerializeField] private float imageScale = 0.05f;
@@ -98,6 +107,18 @@ namespace PixelFlow.Runtime.Data
             set => fitMode = value;
         }
 
+        public float BoardFill
+        {
+            get => boardFillOverridden ? NormalizeBoardFill(boardFill) : DefaultBoardFill;
+            set
+            {
+                boardFill = NormalizeBoardFill(value);
+                boardFillOverridden = true;
+            }
+        }
+
+        public bool BoardFillOverridden => boardFillOverridden;
+
         public float ImageScale
         {
             get => Mathf.Clamp(imageScale, 0.01f, 0.2f);
@@ -133,6 +154,8 @@ namespace PixelFlow.Runtime.Data
                 alphaThreshold = alphaThreshold,
                 cropTransparentBorders = cropTransparentBorders,
                 fitMode = fitMode,
+                boardFill = boardFill,
+                boardFillOverridden = boardFillOverridden,
                 imageScale = imageScale,
                 cellSpacing = cellSpacing,
                 verticalOffset = verticalOffset,
@@ -147,6 +170,12 @@ namespace PixelFlow.Runtime.Data
             }
 
             return clone;
+        }
+
+        private static float NormalizeBoardFill(float value)
+        {
+            var clampedValue = Mathf.Clamp(value, MinimumBoardFill, MaximumBoardFill);
+            return Mathf.Round(clampedValue / BoardFillStep) * BoardFillStep;
         }
     }
 }
