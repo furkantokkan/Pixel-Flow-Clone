@@ -10,8 +10,11 @@ GameObject:
   m_Component:
   - component: {fileID: 7989488854454774189}
   - component: {fileID: 5868662195715186220}
-  m_Layer: 7
-  m_Name: Player
+  - component: {fileID: 6222222222222222223}
+  - component: {fileID: 6333333333333333334}
+  - component: {fileID: 6444444444444444444}
+  m_Layer: 6
+  m_Name: Pig
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -55,6 +58,65 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &6222222222222222223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6312666412539996333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51c8b5df66b43dbb633957ac6d775d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseColor: 2
+  legacyTargetRenderer: {fileID: 0}
+  renderers:
+  - {fileID: 2333259133690744774}
+  currentColorInfo: Pink_Pastel Outline:False Renderers:2
+  controlledRendererCount: 2
+  enableOutline: 0
+  currentColor: 1
+--- !u!114 &6333333333333333334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6312666412539996333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5f6ab0db9bb42d788db0bb2745078bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  view: {fileID: 6444444444444444444}
+  splineFollower: {fileID: 0}
+  resetParentOnDespawn: 1
+  clearViewOnDespawn: 1
+  queuedMoveSpeed: 12
+  returnMoveSpeed: 10
+  rotationSpeed: 18
+  defaultFollowSpeed: 7
+  orbitRadius: 1.15
+  orbitAngularSpeed: 180
+  orbitDuration: 0.85
+  fireDuration: 0.35
+--- !u!114 &6444444444444444444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6312666412539996333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb7d4c52c4ce4afba0b6d1d0b2d5f394, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atlasColorTarget: {fileID: 6222222222222222223}
+  ammoText: {fileID: 5224692724065616133}
+  trayRoot: {fileID: 1912279199987948307}
 --- !u!1 &6371039261737306126
 GameObject:
   m_ObjectHideFlags: 0
@@ -66,7 +128,7 @@ GameObject:
   - component: {fileID: 1171695893570776626}
   - component: {fileID: 1883507118831505356}
   - component: {fileID: 5224692724065616133}
-  m_Layer: 7
+  m_Layer: 6
   m_Name: AmmoText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -157,7 +219,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 67
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -240,7 +302,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2547343034604179712}
-  m_Layer: 7
+  m_Layer: 6
   m_Name: All
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -327,10 +389,14 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 33fb25af141cd8c4da8e66e91a2c609f, type: 2}
+      objectReference: {fileID: 2100000, guid: 10582670d432d8d43a86556ee38b7e14, type: 2}
     - target: {fileID: 919132149155446097, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
       propertyPath: m_Name
       value: Cubic_Dog
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -340,6 +406,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 9001955087300787718}
   m_SourcePrefab: {fileID: 100100000, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
+--- !u!23 &2333259133690744774 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
+  m_PrefabInstance: {fileID: 4008471331697857346}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &3470667883687539881 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b8355fb294513424ea9ecd96ce8c09fd, type: 3}
@@ -420,9 +491,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6553404443391107023, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 6696683089200860187, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
       propertyPath: m_Name
       value: Tray
+      objectReference: {fileID: 0}
+    - target: {fileID: 6696683089200860187, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 6696683089200860187, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
       propertyPath: m_IsActive

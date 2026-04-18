@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b9d22c0f52a4b249178f67bca7ce912, type: 3}
+  m_Name: PixelFlowDefaultBlockData
+  m_EditorClassIdentifier: 
+  blockPrefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
+  cellSpacing: 0.6
+  verticalOffset: 0.5

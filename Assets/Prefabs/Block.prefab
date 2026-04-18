@@ -9,8 +9,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 657692194729196314}
-  - component: {fileID: 3457481751432095468}
-  m_Layer: 6
+  - component: {fileID: 6222222222222222222}
+  - component: {fileID: 6333333333333333333}
+  - component: {fileID: 6444444444444444445}
+  m_Layer: 8
   m_Name: Block
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -33,7 +35,7 @@ Transform:
   - {fileID: 5405213252973438721}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3457481751432095468
+--- !u!114 &6222222222222222222
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,12 +44,46 @@ MonoBehaviour:
   m_GameObject: {fileID: 3187717988475333501}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f45694f904c958429e8cb74102e30c2, type: 3}
+  m_Script: {fileID: 11500000, guid: c51c8b5df66b43dbb633957ac6d775d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  colorCode: 0
-  isReserved: 0
-  isDying: 0
+  baseColor: 2
+  legacyTargetRenderer: {fileID: 0}
+  renderers: []
+  currentColorInfo: Pink_Pastel Outline:False Renderers:1
+  controlledRendererCount: 1
+  enableOutline: 0
+  currentColor: 1
+--- !u!114 &6333333333333333333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3187717988475333501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35dff9180ba54ebcbc3cf4114d15a7dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  view: {fileID: 6444444444444444445}
+  resetParentOnDespawn: 1
+  clearViewOnDespawn: 1
+--- !u!114 &6444444444444444445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3187717988475333501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 798d8a47609d40259e8ab703a28c4668, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atlasColorTarget: {fileID: 6222222222222222222}
+  ammoText: {fileID: 0}
+  trayRoot: {fileID: 0}
 --- !u!1 &4790940214184032140
 GameObject:
   m_ObjectHideFlags: 0
@@ -60,7 +96,7 @@ GameObject:
   - component: {fileID: 7123226024575712596}
   - component: {fileID: 7138471614087188048}
   - component: {fileID: 2939915903615727648}
-  m_Layer: 6
+  m_Layer: 8
   m_Name: Block
   m_TagString: Untagged
   m_Icon: {fileID: 0}
