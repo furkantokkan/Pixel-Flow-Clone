@@ -12,14 +12,14 @@ namespace PixelFlow.Editor.LevelEditing
         internal static bool TryResolveGenerationContext(
             out Theme previewTheme,
             out Transform tempParent,
-            out SceneContext sceneContext,
+            out GameSceneContext sceneContext,
             out string message)
         {
             previewTheme = null;
             tempParent = null;
             sceneContext = null;
 
-            var sceneContexts = UnityEngine.Object.FindObjectsByType<SceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var sceneContexts = UnityEngine.Object.FindObjectsByType<GameSceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < sceneContexts.Length; i++)
             {
                 var candidate = sceneContexts[i];
@@ -133,7 +133,7 @@ namespace PixelFlow.Editor.LevelEditing
 
         internal static void CleanupTemporaryArtifacts(string rootName, string boardRootName, string deckRootName)
         {
-            var sceneContexts = Resources.FindObjectsOfTypeAll<SceneContext>();
+            var sceneContexts = Resources.FindObjectsOfTypeAll<GameSceneContext>();
             for (int i = 0; i < sceneContexts.Length; i++)
             {
                 var sceneContext = sceneContexts[i];
@@ -176,7 +176,7 @@ namespace PixelFlow.Editor.LevelEditing
             }
         }
 
-        private static Theme ResolveGenerationTheme(SceneContext sceneContext)
+        private static Theme ResolveGenerationTheme(GameSceneContext sceneContext)
         {
             if (sceneContext?.Theme != null)
             {

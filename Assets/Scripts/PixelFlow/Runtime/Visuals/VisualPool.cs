@@ -1,6 +1,5 @@
 using Core.Pool;
 using PixelFlow.Runtime.Composition;
-using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Pigs;
 using UnityEngine;
 using VContainer;
@@ -10,7 +9,6 @@ namespace PixelFlow.Runtime.Visuals
     [DisallowMultipleComponent]
     public sealed class VisualPool : MonoBehaviour
     {
-        [SerializeField] private bool useProjectDefaults = true;
         [SerializeField] private PigController pigPrefab;
         [SerializeField] private BlockVisual blockPrefab;
         [SerializeField] private Transform pigPoolRoot;
@@ -46,7 +44,7 @@ namespace PixelFlow.Runtime.Visuals
 
         public void ApplyProjectSettings(ProjectRuntimeSettings settings)
         {
-            if (!useProjectDefaults || settings == null)
+            if (settings == null)
             {
                 return;
             }
@@ -109,24 +107,10 @@ namespace PixelFlow.Runtime.Visuals
             return pigPool?.Rent(parent, worldPositionStays);
         }
 
-        public PigController RentPig(PigColor color, int ammo, Transform parent = null, bool worldPositionStays = false)
-        {
-            var pig = RentPig(parent, worldPositionStays);
-            pig?.ConfigurePig(color, ammo);
-            return pig;
-        }
-
         public BlockVisual RentBlock(Transform parent = null, bool worldPositionStays = false)
         {
             EnsureInitialized();
             return blockPool?.Rent(parent, worldPositionStays);
-        }
-
-        public BlockVisual RentBlock(PigColor color, Transform parent = null, bool worldPositionStays = false)
-        {
-            var block = RentBlock(parent, worldPositionStays);
-            block?.ConfigureBlock(color);
-            return block;
         }
 
         public void ReturnPig(PigController pig)

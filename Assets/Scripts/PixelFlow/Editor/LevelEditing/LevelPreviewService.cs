@@ -17,7 +17,7 @@ namespace PixelFlow.Editor.LevelEditing
             PigColor[,] displayGrid,
             ImageImportSettings settings,
             BlockData blockData,
-            SceneContext sceneContext,
+            GameSceneContext sceneContext,
             Theme theme,
             GameObject fallbackBlockPrefab,
             out string error)
@@ -109,7 +109,7 @@ namespace PixelFlow.Editor.LevelEditing
             return true;
         }
 
-        public static void ClearPreview(SceneContext sceneContext, Theme theme)
+        public static void ClearPreview(GameSceneContext sceneContext, Theme theme)
         {
             if (sceneContext == null)
             {

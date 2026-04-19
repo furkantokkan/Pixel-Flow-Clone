@@ -12,7 +12,6 @@ namespace PixelFlow.Runtime.Managers
     [DisallowMultipleComponent]
     public sealed class InputManager : MonoBehaviour
     {
-        [SerializeField] private bool useProjectDefaults = true;
         [SerializeField, HideInInspector] private Camera inputCamera;
         [SerializeField] private LayerMask pigLayerMask = 1 << 7;
         [SerializeField, Min(1f)] private float maxRayDistance = 500f;
@@ -77,7 +76,7 @@ namespace PixelFlow.Runtime.Managers
 
         public void ApplyProjectSettings(ProjectRuntimeSettings settings)
         {
-            if (!useProjectDefaults || settings == null)
+            if (settings == null)
             {
                 return;
             }

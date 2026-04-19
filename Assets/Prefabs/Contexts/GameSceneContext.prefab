@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2571347999322623634}
-  - component: {fileID: 7000000000000000001}
   - component: {fileID: 7000000000000000002}
   - component: {fileID: 7000000000000000003}
   - component: {fileID: 7000000000000000004}
@@ -36,26 +35,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7000000000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5673821130648578367}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cdb1ecbb77014f7fa886f161fa929f95, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  parentReference:
-    TypeName: 
-  autoRun: 1
-  autoInjectGameObjects: []
-  sceneContext: {fileID: 7000000000000000002}
-  visualPool: {fileID: 7000000000000000003}
-  gameManager: {fileID: 7000000000000000004}
-  inputManager: {fileID: 7000000000000000005}
 --- !u!114 &7000000000000000002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -86,7 +65,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2cb3c95f2fa3460f90a3201e8015b1db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useProjectDefaults: 1
   pigPrefab: {fileID: 6333333333333333334, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
   blockPrefab: {fileID: 6333333333333333333, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   pigPoolRoot: {fileID: 2571347999322623634}
@@ -107,7 +85,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e1447e2bcff48aaa6d93d0f5bf46365, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useProjectDefaults: 1
   traySlotPrefab: {fileID: 6696683089200860187, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
   dispatchFollowSpeed: 7
 --- !u!114 &7000000000000000005
@@ -122,7 +99,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d37093d840847dc8d79a0aacdd9685f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useProjectDefaults: 1
   inputCamera: {fileID: 0}
   pigLayerMask:
     serializedVersion: 2

@@ -68,7 +68,7 @@ namespace PixelFlow.Editor.LevelEditing
         private Vector2Int cachedGridPreviewSize;
         private bool isGridPreviewDirty = true;
         private readonly Dictionary<PigColor, int> cachedPigCellCounts = new();
-        private SceneContext editorManagedEnvironmentContext;
+        private GameSceneContext editorManagedEnvironmentContext;
         private EnvironmentContext editorManagedEnvironmentInstance;
 
         [MenuItem("Tools/Pixel Flow/Level Editor")]
@@ -159,7 +159,7 @@ namespace PixelFlow.Editor.LevelEditing
             editorManagedEnvironmentInstance = null;
             editorManagedEnvironmentContext = null;
 
-            var sceneContexts = Resources.FindObjectsOfTypeAll<SceneContext>();
+            var sceneContexts = Resources.FindObjectsOfTypeAll<GameSceneContext>();
             for (int i = 0; i < sceneContexts.Length; i++)
             {
                 var sceneContext = sceneContexts[i];
@@ -179,21 +179,13 @@ namespace PixelFlow.Editor.LevelEditing
                 {
                     continue;
                 }
-
-                var remainingEnvironment = SceneContextEnvironmentUtility.ResolveEnvironment(sceneContext);
-                var serializedContext = new SerializedObject(sceneContext);
-                serializedContext.FindProperty("environmentInstance").objectReferenceValue = remainingEnvironment;
-                serializedContext.FindProperty("environmentRoot").objectReferenceValue = remainingEnvironment != null
-                    ? remainingEnvironment.transform
-                    : null;
-                serializedContext.ApplyModifiedPropertiesWithoutUndo();
             }
 
             SceneView.RepaintAll();
         }
 
         private void TrackEditorManagedEnvironment(
-            SceneContext sceneContext,
+            GameSceneContext sceneContext,
             EnvironmentContext environment,
             bool markAsTemporary)
         {
@@ -3819,7 +3811,7 @@ namespace PixelFlow.Editor.LevelEditing
             environment = null;
             message = "Could not find SceneContext or EnvironmentContext in the open scene.";
 
-            var sceneContexts = UnityEngine.Object.FindObjectsByType<SceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var sceneContexts = UnityEngine.Object.FindObjectsByType<GameSceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < sceneContexts.Length; i++)
             {
                 var context = sceneContexts[i];
@@ -4120,7 +4112,18 @@ namespace PixelFlow.Editor.LevelEditing
             else
             {
                 var fileName = Path.GetFileName(selectedPath);
-                importedAssetPath = AssetDatabase.GenerateUniqueAssetPath($"{ImportedLevelImagesFolder}/{fileName}");
+                var existingImportedAssetPath = $"{ImportedLevelImagesFolder}/{fileName}";
+                var existingImportedAbsolutePath = Path.Combine(Directory.GetCurrentDirectory(), existingImportedAssetPath);
+                if (File.Exists(existingImportedAbsolutePath))
+                {
+                    if (!AssetDatabase.DeleteAsset(existingImportedAssetPath))
+                    {
+                        statusMessage = $"Existing imported image could not be replaced: {existingImportedAssetPath}";
+                        return false;
+                    }
+                }
+
+                importedAssetPath = existingImportedAssetPath;
 
                 if (isUnityAssetPath)
                 {

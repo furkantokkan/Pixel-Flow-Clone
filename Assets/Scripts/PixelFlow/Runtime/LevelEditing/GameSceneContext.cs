@@ -1,42 +1,38 @@
 using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Factories;
 using PixelFlow.Runtime.Managers;
 using PixelFlow.Runtime.Visuals;
 using UnityEngine;
-using UnityEngine.Serialization;
 using VContainer;
 using VContainer.Unity;
 
 namespace PixelFlow.Runtime.LevelEditing
 {
-    [RequireComponent(typeof(GameSceneLifetimeScope))]
     [DisallowMultipleComponent]
-    public sealed class SceneContext : MonoBehaviour
+    public sealed class GameSceneContext : LifetimeScope
     {
-        [SerializeField, HideInInspector] private Transform environmentRoot;
-        [SerializeField, HideInInspector] private EnvironmentContext environmentInstance;
-        [FormerlySerializedAs("debugEnvironment")]
-        [SerializeField, HideInInspector] private EnvironmentContext legacyDebugEnvironment;
+        private EnvironmentContext environmentInstance;
         [SerializeField] private VisualPool visualPool;
         [SerializeField] private GameManager gameManager;
         [SerializeField] private InputManager inputManager;
 
         private ThemeDatabase injectedThemeDatabase;
         private Theme injectedDefaultTheme;
-        private GameSceneLifetimeScope sceneLifetimeScope;
+        private IGameFactory gameFactory;
         private ProjectLifetimeScope projectLifetimeScope;
 
         public Theme Theme => ResolveTheme(null);
         public ThemeDatabase ThemeDatabase => ResolveThemeDatabase();
-        public Transform EnvironmentRoot => environmentRoot;
+        public Transform EnvironmentRoot => environmentInstance != null ? environmentInstance.transform : null;
         public EnvironmentContext EnvironmentInstance => environmentInstance;
         public VisualPool VisualPool => visualPool;
         public GameManager GameManager => gameManager;
         public InputManager InputManager => inputManager;
+        public IGameFactory GameFactory => gameFactory;
 
         private void Reset()
         {
-            SyncEnvironmentRoot();
             visualPool ??= GetComponent<VisualPool>();
             gameManager ??= GetComponent<GameManager>();
             inputManager ??= GetComponent<InputManager>();
@@ -46,7 +42,6 @@ namespace PixelFlow.Runtime.LevelEditing
 
         private void OnValidate()
         {
-            SyncEnvironmentRoot();
             visualPool ??= GetComponent<VisualPool>();
             gameManager ??= GetComponent<GameManager>();
             inputManager ??= GetComponent<InputManager>();
@@ -54,9 +49,28 @@ namespace PixelFlow.Runtime.LevelEditing
             TryAutoAssignThemeReferences();
         }
 
-        private void Awake()
+        private void OnTransformChildrenChanged()
         {
-            SyncEnvironmentRoot();
+            TryAutoAssignSceneReferences();
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+        }
+
+        protected override LifetimeScope FindParent()
+        {
+            return LifetimeScope.Find<ProjectLifetimeScope>();
+        }
+
+        protected override void Configure(IContainerBuilder builder)
+        {
+            builder.Register<IGameFactory, GameFactory>(Lifetime.Scoped);
+            builder.RegisterComponent(this);
+            RegisterComponent(builder, visualPool != null ? visualPool : GetComponent<VisualPool>());
+            RegisterComponent(builder, gameManager != null ? gameManager : GetComponent<GameManager>());
+            RegisterComponent(builder, inputManager != null ? inputManager : GetComponent<InputManager>());
         }
 
         private void Start()
@@ -106,8 +120,6 @@ namespace PixelFlow.Runtime.LevelEditing
 
         public EnvironmentContext EnsureEnvironment(Theme overrideTheme = null)
         {
-            SyncEnvironmentRoot();
-
             var resolvedTheme = ResolveTheme(overrideTheme);
             if (!CanReuseEnvironment(environmentInstance, resolvedTheme))
             {
@@ -133,16 +145,15 @@ namespace PixelFlow.Runtime.LevelEditing
                     blockRootOverride: environmentInstance.BlockContainer != null ? environmentInstance.BlockContainer : environmentInstance.transform);
             }
 
-            SyncEnvironmentRoot();
-
             return environmentInstance;
         }
 
         [Inject]
-        public void Construct(ThemeDatabase injectedThemeDatabase, Theme injectedDefaultTheme)
+        public void Construct(ThemeDatabase injectedThemeDatabase, Theme injectedDefaultTheme, IGameFactory gameFactory)
         {
             this.injectedThemeDatabase ??= injectedThemeDatabase;
             this.injectedDefaultTheme ??= injectedDefaultTheme;
+            this.gameFactory ??= gameFactory;
         }
 
         private Camera ResolveInputCamera()
@@ -205,12 +216,15 @@ namespace PixelFlow.Runtime.LevelEditing
 
             var resolvedTheme = ResolveTheme(null);
 
+            if (!CanReuseEnvironment(environmentInstance, resolvedTheme))
+            {
+                environmentInstance = null;
+            }
+
             if (environmentInstance == null)
             {
                 environmentInstance = ResolveManagedEnvironment(resolvedTheme);
             }
-
-            SyncEnvironmentRoot();
         }
 
         private EnvironmentContext ResolveManagedEnvironment(Theme resolvedTheme)
@@ -253,7 +267,7 @@ namespace PixelFlow.Runtime.LevelEditing
 
             var environmentHostRoot = ResolveEnvironmentHostRoot();
             GameObject spawnedGameObject;
-            var parentScope = (LifetimeScope)ResolveSceneLifetimeScope() ?? ResolveProjectLifetimeScope();
+            var parentScope = Container != null ? (LifetimeScope)this : ResolveProjectLifetimeScope();
 #if UNITY_EDITOR
             if (!Application.isPlaying)
             {
@@ -344,11 +358,6 @@ namespace PixelFlow.Runtime.LevelEditing
             return transform;
         }
 
-        private void SyncEnvironmentRoot()
-        {
-            environmentRoot = environmentInstance != null ? environmentInstance.transform : null;
-        }
-
         private Theme ResolveProjectDefaultTheme()
         {
             if (injectedDefaultTheme != null)
@@ -388,12 +397,6 @@ namespace PixelFlow.Runtime.LevelEditing
 #endif
 
             return null;
-        }
-
-        private GameSceneLifetimeScope ResolveSceneLifetimeScope()
-        {
-            sceneLifetimeScope ??= GetComponent<GameSceneLifetimeScope>();
-            return sceneLifetimeScope;
         }
 
         private ProjectLifetimeScope ResolveProjectLifetimeScope()
@@ -440,6 +443,17 @@ namespace PixelFlow.Runtime.LevelEditing
 #endif
 
             UnityEngine.Object.Destroy(candidate.gameObject);
+        }
+
+        private static void RegisterComponent<TComponent>(IContainerBuilder builder, TComponent component)
+            where TComponent : Component
+        {
+            if (component == null)
+            {
+                return;
+            }
+
+            builder.RegisterComponent(component);
         }
     }
 }

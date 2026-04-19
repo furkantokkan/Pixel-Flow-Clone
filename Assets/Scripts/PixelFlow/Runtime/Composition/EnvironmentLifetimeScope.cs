@@ -8,29 +8,15 @@ namespace PixelFlow.Runtime.Composition
     [DisallowMultipleComponent]
     public sealed class EnvironmentLifetimeScope : LifetimeScope
     {
-        [SerializeField] private EnvironmentContext environmentContext;
-
-        public EnvironmentContext EnvironmentContext => environmentContext;
-
-        private void Reset()
-        {
-            ResolveReferences();
-        }
-
-        private void OnValidate()
-        {
-            ResolveReferences();
-        }
-
         protected override LifetimeScope FindParent()
         {
-            return GetComponentInParent<GameSceneLifetimeScope>()
+            return GetComponentInParent<GameSceneContext>()
                 ?? LifetimeScope.Find<ProjectLifetimeScope>();
         }
 
         protected override void Configure(IContainerBuilder builder)
         {
-            ResolveReferences();
+            var environmentContext = GetComponent<EnvironmentContext>();
             if (environmentContext == null)
             {
                 return;
@@ -38,12 +24,6 @@ namespace PixelFlow.Runtime.Composition
 
             environmentContext.ResolveMissingReferences();
             builder.RegisterComponent(environmentContext);
-        }
-
-        private void ResolveReferences()
-        {
-            environmentContext ??= GetComponent<EnvironmentContext>();
-            environmentContext?.ResolveMissingReferences();
         }
     }
 }

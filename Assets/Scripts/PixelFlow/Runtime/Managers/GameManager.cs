@@ -17,7 +17,6 @@ namespace PixelFlow.Runtime.Managers
         private static readonly Quaternion TrayIndicatorLocalRotation = Quaternion.identity;
         private static readonly Vector3 TrayIndicatorLocalScale = Vector3.one;
 
-        [SerializeField] private bool useProjectDefaults = true;
         [SerializeField] private GameObject traySlotPrefab;
         [SerializeField, Min(0.01f)] private float dispatchFollowSpeed = 7f;
 
@@ -64,7 +63,7 @@ namespace PixelFlow.Runtime.Managers
 
         public void ApplyProjectSettings(ProjectRuntimeSettings settings)
         {
-            if (!useProjectDefaults || settings == null)
+            if (settings == null)
             {
                 return;
             }

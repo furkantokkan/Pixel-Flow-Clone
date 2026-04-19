@@ -152,10 +152,10 @@ namespace PixelFlow.Editor.LevelEditing
 
     internal static class SceneContextEnvironmentUtility
     {
-        internal static bool TryResolveOpenSceneContext(out SceneContext sceneContext)
+        internal static bool TryResolveOpenSceneContext(out GameSceneContext sceneContext)
         {
             sceneContext = null;
-            var sceneContexts = UnityEngine.Object.FindObjectsByType<SceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var sceneContexts = UnityEngine.Object.FindObjectsByType<GameSceneContext>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < sceneContexts.Length; i++)
             {
                 var candidate = sceneContexts[i];
@@ -171,7 +171,7 @@ namespace PixelFlow.Editor.LevelEditing
             return false;
         }
 
-        internal static EnvironmentContext ResolveEnvironment(SceneContext sceneContext)
+        internal static EnvironmentContext ResolveEnvironment(GameSceneContext sceneContext)
         {
             if (sceneContext == null)
             {
@@ -196,7 +196,7 @@ namespace PixelFlow.Editor.LevelEditing
             return null;
         }
 
-        internal static bool IsEditorManagedEnvironment(SceneContext sceneContext, EnvironmentContext environment)
+        internal static bool IsEditorManagedEnvironment(GameSceneContext sceneContext, EnvironmentContext environment)
         {
             return sceneContext != null
                 && environment != null
@@ -206,7 +206,7 @@ namespace PixelFlow.Editor.LevelEditing
                 && (environment.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0;
         }
 
-        internal static bool RemoveEditorManagedEnvironment(SceneContext sceneContext)
+        internal static bool RemoveEditorManagedEnvironment(GameSceneContext sceneContext)
         {
             if (sceneContext == null)
             {
