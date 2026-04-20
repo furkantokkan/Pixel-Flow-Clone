@@ -17,6 +17,7 @@ namespace PixelFlow.Runtime.Pigs
     }
 
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(SplineFollower))]
     public sealed class PigController : MonoBehaviour, IPoolable
     {
         [SerializeField] private PigView view;
@@ -27,6 +28,8 @@ namespace PixelFlow.Runtime.Pigs
         [SerializeField, Min(0.01f)] private float returnMoveSpeed = 10f;
         [SerializeField, Min(0.01f)] private float rotationSpeed = 18f;
         [SerializeField, Min(0.01f)] private float defaultFollowSpeed = 7f;
+        [SerializeField, Min(0.01f)] private float beltFireInterval = 0.12f;
+        [SerializeField, Range(0.9f, 1f)] private float splineCompletionPercent = 0.995f;
         [SerializeField, Min(0.01f)] private float orbitRadius = 1.15f;
         [SerializeField, Min(0.01f)] private float orbitAngularSpeed = 180f;
         [SerializeField, Min(0.01f)] private float orbitDuration = 0.85f;
@@ -42,15 +45,24 @@ namespace PixelFlow.Runtime.Pigs
         private Transform orbitTarget;
         private double targetSplinePercent = 1.0;
         private float stateTimer;
+        private float beltShotCooldown;
         private bool firedDuringCurrentCycle;
 
         public event Action<PigController> Fired;
+        public event Action<PigController> ConveyorLoopCompleted;
+        public event Action<PigController> ReturnedToWaiting;
 
         public PigColor Color => model.Color;
         public int Ammo => model.Ammo;
+        public bool HasAmmo => model.Ammo > 0;
         public PigDirection Direction => model.Direction;
         public bool IsQueued => model.Queued;
         public PigState State { get; private set; }
+        public Transform ProjectileOrigin => view != null ? view.ProjectileOrigin : transform;
+        public bool CanAttemptBeltShot => State == PigState.FollowingSpline && HasAmmo && beltShotCooldown <= 0f;
+        public double CurrentSplinePercent => splineFollower != null && splineFollower.spline != null
+            ? splineFollower.GetPercent()
+            : 0.0;
 
         private void Awake()
         {
@@ -98,6 +110,7 @@ namespace PixelFlow.Runtime.Pigs
         {
             model.Configure(color, ammo, direction);
             StopSplineFollowing();
+            beltShotCooldown = 0f;
             firedDuringCurrentCycle = false;
             State = PigState.Idle;
             Render();
@@ -199,6 +212,7 @@ namespace PixelFlow.Runtime.Pigs
             model.SetQueued(false);
             orbitTarget = orbitAround;
             targetSplinePercent = Math.Max(0.0, Math.Min(1.0, endPercent));
+            beltShotCooldown = 0f;
             splineFollower.spline = spline;
             splineFollower.clipFrom = Math.Max(0.0, Math.Min(1.0, startPercent));
             splineFollower.clipTo = targetSplinePercent;
@@ -212,6 +226,11 @@ namespace PixelFlow.Runtime.Pigs
             Render();
         }
 
+        public void NotifyBeltShotFired()
+        {
+            beltShotCooldown = Mathf.Max(0.01f, beltFireInterval);
+        }
+
         public void BeginOrbitAndFire(Transform orbitAround)
         {
             orbitTarget = orbitAround;
@@ -223,6 +242,7 @@ namespace PixelFlow.Runtime.Pigs
         public void ReturnToWaiting()
         {
             StopSplineFollowing();
+            beltShotCooldown = 0f;
             stateTimer = 0f;
             State = waitingAnchor != null
                 ? PigState.ReturningToWaiting
@@ -263,23 +283,31 @@ namespace PixelFlow.Runtime.Pigs
         {
             if (splineFollower == null || splineFollower.spline == null)
             {
-                ReturnToWaiting();
+                CompleteSplineLoop();
                 return;
             }
 
-            if (splineFollower.GetPercent() + 0.0001d < targetSplinePercent)
+            if (beltShotCooldown > 0f)
+            {
+                beltShotCooldown = Mathf.Max(0f, beltShotCooldown - Time.deltaTime);
+            }
+
+            var completionThreshold = Math.Min(targetSplinePercent, splineCompletionPercent);
+            if (splineFollower.GetPercent() + 0.0001d < completionThreshold)
             {
                 return;
             }
 
+            CompleteSplineLoop();
+        }
+
+        private void CompleteSplineLoop()
+        {
             StopSplineFollowing();
-            if (orbitTarget != null)
-            {
-                BeginOrbitAndFire(orbitTarget);
-                return;
-            }
-
-            BeginFiring();
+            beltShotCooldown = 0f;
+            State = PigState.Idle;
+            SetOnBelt(false);
+            ConveyorLoopCompleted?.Invoke(this);
         }
 
         private void UpdateOrbiting()
@@ -309,7 +337,13 @@ namespace PixelFlow.Runtime.Pigs
         {
             if (!firedDuringCurrentCycle)
             {
-                TryConsumeAmmo();
+                if (!TryConsumeAmmo())
+                {
+                    stateTimer = 0f;
+                    ReturnToWaiting();
+                    return;
+                }
+
                 Fired?.Invoke(this);
                 firedDuringCurrentCycle = true;
             }
@@ -346,7 +380,14 @@ namespace PixelFlow.Runtime.Pigs
 
             if ((transform.position - targetPosition).sqrMagnitude <= 0.0001f)
             {
-                State = completedState;
+                if (State != completedState)
+                {
+                    State = completedState;
+                    if (completedState == PigState.Queued)
+                    {
+                        ReturnedToWaiting?.Invoke(this);
+                    }
+                }
             }
         }
 
@@ -385,11 +426,13 @@ namespace PixelFlow.Runtime.Pigs
             }
 
             splineFollower.follow = false;
+            splineFollower.spline = null;
         }
 
         private void ClearRuntimeState()
         {
             stateTimer = 0f;
+            beltShotCooldown = 0f;
             firedDuringCurrentCycle = false;
             targetSplinePercent = 1.0;
             orbitTarget = null;
@@ -426,12 +469,30 @@ namespace PixelFlow.Runtime.Pigs
 
             if (!runtimeOnly || splineFollower != null || !Application.isPlaying)
             {
+                ConfigureSplineFollower();
                 return;
             }
 
             splineFollower = gameObject.AddComponent<SplineFollower>();
+            ConfigureSplineFollower();
+        }
+
+        private void ConfigureSplineFollower()
+        {
+            if (splineFollower == null)
+            {
+                return;
+            }
+
             splineFollower.follow = false;
+            splineFollower.autoStartPosition = false;
             splineFollower.updateMethod = SplineUser.UpdateMethod.Update;
+            splineFollower.followMode = SplineFollower.FollowMode.Uniform;
+            splineFollower.wrapMode = SplineFollower.Wrap.Default;
+            splineFollower.physicsMode = SplineTracer.PhysicsMode.Transform;
+            splineFollower.motion.applyPosition = true;
+            splineFollower.motion.applyRotation = true;
+            splineFollower.motion.applyScale = false;
         }
     }
 }

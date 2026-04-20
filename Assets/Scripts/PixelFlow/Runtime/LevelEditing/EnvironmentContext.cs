@@ -1,4 +1,6 @@
 using PixelFlow.Runtime.Data;
+using PixelFlow.Runtime.Composition;
+using System.Collections.Generic;
 using UnityEngine;
 using Dreamteck.Splines;
 using TMPro;
@@ -7,7 +9,7 @@ using VContainer;
 namespace PixelFlow.Runtime.LevelEditing
 {
     [DisallowMultipleComponent]
-    public sealed class EnvironmentContext : MonoBehaviour
+    public sealed class EnvironmentContext : EnvironmentLifetimeScope
     {
         private static readonly Vector3 TrayCounterLocalPosition = new(0f, -0.42f, 0f);
         private static readonly Quaternion TrayCounterLocalRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -16,6 +18,8 @@ namespace PixelFlow.Runtime.LevelEditing
         [SerializeField] private Transform blockContainer;
         [SerializeField] private Transform holdingContainer;
         [SerializeField] private Transform deckContainer;
+        
+        [SerializeField] private Transform trayRootPos;
         [SerializeField] private Transform trayEquipPos;
         [SerializeField] private Transform trayDropPos;
         [SerializeField] private SplineComputer dispatchSpline;
@@ -28,6 +32,7 @@ namespace PixelFlow.Runtime.LevelEditing
         public Transform BlockContainer => blockContainer;
         public Transform HoldingContainer => holdingContainer;
         public Transform DeckContainer => deckContainer;
+        public Transform TrayRoot => trayRootPos;
         public Transform TrayEquipPos => trayEquipPos;
         public Transform TrayDropPos => trayDropPos;
         public SplineComputer DispatchSpline => dispatchSpline;
@@ -68,9 +73,10 @@ namespace PixelFlow.Runtime.LevelEditing
             }
         }
 
-        private void Awake()
+        protected override void Awake()
         {
             ResolveMissingReferences();
+            base.Awake();
         }
 
         private void Reset()
@@ -99,6 +105,11 @@ namespace PixelFlow.Runtime.LevelEditing
             if (deckContainer == null)
             {
                 deckContainer = ResolveTransform("Deck_Container");
+            }
+
+            if (trayRootPos == null)
+            {
+                trayRootPos = ResolveTransform("TrayRoot");
             }
 
             if (trayEquipPos == null)
@@ -142,28 +153,29 @@ namespace PixelFlow.Runtime.LevelEditing
         {
             ResolveMissingReferences();
 
-            var anchor = trayEquipPos != null
-                ? trayEquipPos
-                : holdingContainer;
-            if (anchor == null)
-            {
-                return null;
-            }
-
             if (trayCounterText == null)
             {
+                var anchor = trayRootPos != null
+                    ? trayRootPos
+                    : trayEquipPos != null
+                        ? trayEquipPos
+                        : holdingContainer;
+                if (anchor == null)
+                {
+                    return null;
+                }
+
                 trayCounterText = CreateTrayCounterText(anchor);
+                if (trayCounterText == null)
+                {
+                    return null;
+                }
+
+                trayCounterText.transform.localPosition = TrayCounterLocalPosition;
+                trayCounterText.transform.localRotation = TrayCounterLocalRotation;
+                trayCounterText.transform.localScale = TrayCounterLocalScale;
             }
 
-            if (trayCounterText == null)
-            {
-                return null;
-            }
-
-            trayCounterText.transform.SetParent(anchor, false);
-            trayCounterText.transform.localPosition = TrayCounterLocalPosition;
-            trayCounterText.transform.localRotation = TrayCounterLocalRotation;
-            trayCounterText.transform.localScale = TrayCounterLocalScale;
             return trayCounterText;
         }
 
@@ -182,9 +194,10 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
             var appliedCount = Mathf.Clamp(desiredCount, Mathf.Max(0, minCount), Mathf.Min(maxCount, capacity));
-            for (int i = 0; i < capacity; i++)
+            var orderedSlots = GetOrderedHoldingSlots(activeOnly: false);
+            for (int i = 0; i < orderedSlots.Count; i++)
             {
-                holdingContainer.GetChild(i).gameObject.SetActive(i < appliedCount);
+                orderedSlots[i].gameObject.SetActive(i < appliedCount);
             }
 
             return appliedCount;
@@ -198,31 +211,64 @@ namespace PixelFlow.Runtime.LevelEditing
                 return null;
             }
 
-            if (!activeOnly)
+            var orderedSlots = GetOrderedHoldingSlots(activeOnly);
+            return index < orderedSlots.Count
+                ? orderedSlots[index]
+                : null;
+        }
+
+        private List<Transform> GetOrderedHoldingSlots(bool activeOnly)
+        {
+            var orderedSlots = new List<Transform>();
+            if (holdingContainer == null)
             {
-                return index < holdingContainer.childCount
-                    ? holdingContainer.GetChild(index)
-                    : null;
+                return orderedSlots;
             }
 
-            var activeIndex = 0;
             for (int i = 0; i < holdingContainer.childCount; i++)
             {
                 var slot = holdingContainer.GetChild(i);
-                if (!slot.gameObject.activeSelf)
+                if (slot == null)
                 {
                     continue;
                 }
 
-                if (activeIndex == index)
+                if (activeOnly && !slot.gameObject.activeSelf)
                 {
-                    return slot;
+                    continue;
                 }
 
-                activeIndex++;
+                orderedSlots.Add(slot);
             }
 
-            return null;
+            orderedSlots.Sort(CompareHoldingSlotsByVisualOrder);
+            return orderedSlots;
+        }
+
+        private static int CompareHoldingSlotsByVisualOrder(Transform left, Transform right)
+        {
+            if (left == right)
+            {
+                return 0;
+            }
+
+            if (left == null)
+            {
+                return 1;
+            }
+
+            if (right == null)
+            {
+                return -1;
+            }
+
+            var xCompare = left.position.x.CompareTo(right.position.x);
+            if (xCompare != 0)
+            {
+                return xCompare;
+            }
+
+            return left.GetSiblingIndex().CompareTo(right.GetSiblingIndex());
         }
 
         private Transform ResolveTransform(string targetName)
@@ -247,7 +293,7 @@ namespace PixelFlow.Runtime.LevelEditing
 
         private TMP_Text ResolveTrayCounterText()
         {
-            var directChild = transform.Find("TrayCounterText");
+            var directChild = transform.Find("TrayCounterText") ?? transform.Find("Tray Text");
             if (directChild != null)
             {
                 return directChild.GetComponent<TMP_Text>();
@@ -256,7 +302,8 @@ namespace PixelFlow.Runtime.LevelEditing
             var texts = GetComponentsInChildren<TMP_Text>(true);
             for (int i = 0; i < texts.Length; i++)
             {
-                if (texts[i] != null && texts[i].name == "TrayCounterText")
+                if (texts[i] != null
+                    && (texts[i].name == "TrayCounterText" || texts[i].name == "Tray Text"))
                 {
                     return texts[i];
                 }

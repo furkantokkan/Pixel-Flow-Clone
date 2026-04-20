@@ -17,6 +17,7 @@ namespace PixelFlow.Editor.Visuals
             }
 
             DrawIfPresent("currentColor");
+            DrawIfPresent("currentToneIndex");
             DrawIfPresent("renderers");
             DrawIfPresent("enableOutline");
 

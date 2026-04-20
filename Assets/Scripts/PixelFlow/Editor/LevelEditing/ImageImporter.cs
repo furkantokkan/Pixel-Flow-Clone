@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
+using Core.Runtime.ColorAtlas;
 using PixelFlow.Runtime.Data;
 using UnityEditor;
 using UnityEngine;
@@ -9,7 +10,19 @@ namespace PixelFlow.Editor.LevelEditing
 {
     internal static class ImageImporter
     {
-        public static bool TryImport(Texture2D sourceTexture, ImageImportSettings settings, out PigColor[,] grid, out string error)
+        internal readonly struct ImportedCellData
+        {
+            public ImportedCellData(PigColor color, int toneIndex)
+            {
+                Color = color;
+                ToneIndex = AtlasPaletteConstants.ClampToneIndex(toneIndex);
+            }
+
+            public PigColor Color { get; }
+            public int ToneIndex { get; }
+        }
+
+        public static bool TryImport(Texture2D sourceTexture, ImageImportSettings settings, out ImportedCellData[,] grid, out string error)
         {
             grid = null;
             error = null;
@@ -69,7 +82,7 @@ namespace PixelFlow.Editor.LevelEditing
 
                 var paletteSourcePixels = CollectPaletteSourcePixels(workingTexture, settings.AlphaThreshold);
                 var mappedColors = MapSampledPixelsToPigColors(sampledPixels, paletteSourcePixels, settings);
-                grid = new PigColor[settings.TargetColumns, settings.TargetRows];
+                grid = new ImportedCellData[settings.TargetColumns, settings.TargetRows];
 
                 for (int x = 0; x < settings.TargetColumns; x++)
                 {
@@ -81,11 +94,14 @@ namespace PixelFlow.Editor.LevelEditing
 
                         if (color.a < settings.AlphaThreshold)
                         {
-                            grid[x, yView] = PigColor.None;
+                            grid[x, yView] = new ImportedCellData(PigColor.None, AtlasPaletteConstants.DefaultToneIndex);
                             continue;
                         }
 
-                        grid[x, yView] = mappedColors[index];
+                        var mappedColor = mappedColors[index];
+                        grid[x, yView] = new ImportedCellData(
+                            mappedColor,
+                            ResolveToneIndex(color, mappedColor));
                     }
                 }
 
@@ -257,6 +273,36 @@ namespace PixelFlow.Editor.LevelEditing
             }
 
             return mappedColors;
+        }
+
+        private static int ResolveToneIndex(Color sourceColor, PigColor mappedColor)
+        {
+            if (mappedColor == PigColor.None)
+            {
+                return AtlasPaletteConstants.DefaultToneIndex;
+            }
+
+            if (mappedColor == PigColor.Black)
+            {
+                return AtlasPaletteConstants.MinToneIndex;
+            }
+
+            Color.RGBToHSV(sourceColor, out _, out var saturation, out var value);
+            var luminance = ComputeLuminance(sourceColor);
+            var brightness = Mathf.Lerp(luminance, value, saturation >= 0.2f ? 0.65f : 0.35f);
+            var normalizedBrightness = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(brightness));
+            var toneIndex = Mathf.RoundToInt(normalizedBrightness * AtlasPaletteConstants.MaxToneIndex);
+
+            if (mappedColor == PigColor.White)
+            {
+                toneIndex = Mathf.Max(AtlasPaletteConstants.MaxToneIndex - 1, toneIndex);
+            }
+            else if (mappedColor == PigColor.Gray)
+            {
+                toneIndex = Mathf.Max(2, toneIndex);
+            }
+
+            return AtlasPaletteConstants.ClampToneIndex(toneIndex);
         }
 
         private static List<PigColorPaletteEntry> CreateMatchingPaletteEntries(IReadOnlyList<PigColorPaletteEntry> paletteEntries)

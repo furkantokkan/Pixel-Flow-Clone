@@ -9,14 +9,13 @@ namespace PixelFlow.Runtime.Data
     {
         [SerializeField] private Vector2Int gridSize = new(12, 12);
         [SerializeField] private Theme theme;
-        [SerializeField] private Texture2D sourceImage;
+        [SerializeField, HideInInspector] private Texture2D sourceImage;
         [SerializeField] private BlockData blockData;
         [SerializeField] private ImageImportSettings importSettings = new();
         [SerializeField] private List<PixelCellData> pixelCells = new();
         [SerializeField] private List<WaitingSlotData> waitingSlots = new();
-        [SerializeField] private List<PigQueueEntry> pigQueue = new();
-        [SerializeField] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
-        [SerializeField] private ConveyorBakeData conveyorBakeData = new();
+        [SerializeField, HideInInspector] private List<PigQueueEntry> pigQueue = new();
+        [SerializeField, HideInInspector] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
 
         public Vector2Int GridSize => gridSize;
         public Theme Theme => theme;
@@ -27,7 +26,6 @@ namespace PixelFlow.Runtime.Data
         public IReadOnlyList<WaitingSlotData> WaitingSlots => waitingSlots;
         public IReadOnlyList<PigQueueEntry> PigQueue => pigQueue;
         public PigQueueGenerationSettings PigQueueGenerationSettings => pigQueueGenerationSettings;
-        public ConveyorBakeData ConveyorBakeData => conveyorBakeData;
 
 #if UNITY_EDITOR
         public PigColor[,] EditorCreateDisplayGrid()

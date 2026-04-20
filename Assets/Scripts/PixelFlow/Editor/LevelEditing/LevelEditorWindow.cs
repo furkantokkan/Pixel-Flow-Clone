@@ -20,6 +20,7 @@ namespace PixelFlow.Editor.LevelEditing
         private const string DefaultDatabaseAssetName = "PixelFlowLevelDatabase";
         private const string DefaultDefaultsFolder = "Assets/Data/PixelFlow/Defaults";
         private const string DefaultBlockDataAssetPath = DefaultDefaultsFolder + "/PixelFlowDefaultBlockData.asset";
+        private const string CurrentLevelPrefsKey = "pixelflow.level.current_index";
         private const string DefaultBlockPrefabGuid = "331edf6250de4de4a909c2115614f2d7";
         private const string DefaultPigPrefabGuid = "5f47c7c5de4f2ce4dbe9606dc849868f";
         private const string ImportedLevelImagesFolder = "Assets/Imported Level Images";
@@ -589,7 +590,7 @@ namespace PixelFlow.Editor.LevelEditing
                         EditorStyles.miniLabel);
                 }
 
-                EditorGUILayout.LabelField("Grid painting uses direct pig colors. The database only resolves the matching 1x1 pig definition.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Grid painting uses direct block colors. The database only resolves the matching 1x1 block definition.", EditorStyles.miniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -1058,8 +1059,8 @@ namespace PixelFlow.Editor.LevelEditing
                 }
 
                 var size = definition.GridSize;
-                var pigColor = definition.Kind == PlaceableKind.Pig ? definition.Color : PigColor.None;
-                var fallbackColor = definition.Kind == PlaceableKind.Pig
+                var blockColor = definition.Kind == PlaceableKind.Block ? definition.Color : PigColor.None;
+                var fallbackColor = definition.Kind == PlaceableKind.Block
                     ? PigColorPaletteUtility.GetDisplayColor(definition.Color, workingImportSettings.PaletteEntries)
                     : definition.EditorColor;
 
@@ -1092,7 +1093,11 @@ namespace PixelFlow.Editor.LevelEditing
                             verticalOffset,
                             layout.GetLocalZFromBottom(gridY));
                         instance.transform.localRotation = Quaternion.identity;
-                        ApplyTemporaryColor(instance, pigColor, fallbackColor);
+                        ApplyTemporaryColor(
+                            instance,
+                            blockColor,
+                            fallbackColor,
+                            ResolvePlacedObjectToneIndex(placedObject, blockColor));
                         generatedBlockCount++;
                     }
                 }
@@ -1265,28 +1270,6 @@ namespace PixelFlow.Editor.LevelEditing
                 return genericPigPrefab;
             }
 
-            if (selectedDatabase != null
-                && selectedDatabase.TryGetDefaultPigPlaceable(color, out var definition)
-                && definition != null
-                && IsValidTemporaryPigPrefab(definition.Prefab))
-            {
-                return definition.Prefab;
-            }
-
-            if (selectedDatabase != null)
-            {
-                for (int i = 0; i < selectedDatabase.PlaceableObjects.Count; i++)
-                {
-                    var candidate = selectedDatabase.PlaceableObjects[i];
-                    if (candidate != null
-                        && candidate.Kind == PlaceableKind.Pig
-                        && IsValidTemporaryPigPrefab(candidate.Prefab))
-                    {
-                        return candidate.Prefab;
-                    }
-                }
-            }
-
             return genericPigPrefab;
         }
 
@@ -1371,6 +1354,7 @@ namespace PixelFlow.Editor.LevelEditing
                 pigController.SetQueued(false, snapImmediately: false);
                 pigController.ClearWaitingAnchor();
                 ApplyTemporaryColor(instance, entry.Color, fallbackColor);
+                instance.GetComponent<PigView>()?.ApplyEditorPreviewFacingCorrection();
                 return true;
             }
 
@@ -1383,6 +1367,7 @@ namespace PixelFlow.Editor.LevelEditing
             }
 
             ApplyTemporaryColor(instance, entry.Color, fallbackColor);
+            instance.GetComponent<PigView>()?.ApplyEditorPreviewFacingCorrection();
 
             if (ammoText != null)
             {
@@ -1422,7 +1407,7 @@ namespace PixelFlow.Editor.LevelEditing
             return null;
         }
 
-        private static void ApplyTemporaryColor(GameObject target, PigColor pigColor, Color fallbackColor)
+        private static void ApplyTemporaryColor(GameObject target, PigColor pigColor, Color fallbackColor, int toneIndex = -1)
         {
             if (target == null)
             {
@@ -1432,7 +1417,14 @@ namespace PixelFlow.Editor.LevelEditing
             var atlasTarget = target.GetComponentInChildren<AtlasColorTarget>(true);
             if (atlasTarget != null && pigColor != PigColor.None)
             {
-                atlasTarget.SetColor(pigColor);
+                if (toneIndex >= 0)
+                {
+                    atlasTarget.SetColor(pigColor, toneIndex);
+                }
+                else
+                {
+                    atlasTarget.SetColor(pigColor);
+                }
 #if UNITY_EDITOR
                 EditorUtility.SetDirty(atlasTarget);
 #endif
@@ -1657,10 +1649,10 @@ namespace PixelFlow.Editor.LevelEditing
                             cachedRootFlags[cacheIndex] = dx == 0 && dy == 0;
                             gridPreviewPixels[cacheIndex] = previewColor;
 
-                            if (definition.Kind == PlaceableKind.Pig && definition.Color != PigColor.None)
-                            {
-                                cachedPigCellCounts[definition.Color] = cachedPigCellCounts.TryGetValue(definition.Color, out var currentCount)
-                                    ? currentCount + 1
+                if (definition.Kind == PlaceableKind.Block && definition.Color != PigColor.None)
+                {
+                    cachedPigCellCounts[definition.Color] = cachedPigCellCounts.TryGetValue(definition.Color, out var currentCount)
+                        ? currentCount + 1
                                     : 1;
                             }
                         }
@@ -1968,8 +1960,10 @@ namespace PixelFlow.Editor.LevelEditing
             selectedDatabase.SetLevelAt(selectedLevelIndex, CreateWorkingLevelSnapshot());
             EditorUtility.SetDirty(selectedDatabase);
             AssetDatabase.SaveAssets();
+            PlayerPrefs.SetInt(CurrentLevelPrefsKey, selectedLevelIndex);
+            PlayerPrefs.Save();
             BuildLevelPopupNames();
-            statusMessage = $"Saved {workingLevelName}.";
+            statusMessage = $"Saved {workingLevelName} and marked it as the active playtest level.";
         }
 
         private LevelData CreateWorkingLevelSnapshot()
@@ -2023,6 +2017,13 @@ namespace PixelFlow.Editor.LevelEditing
                     workingPlacedObjects.RemoveAt(i);
                 }
             }
+        }
+
+        private static int ResolvePlacedObjectToneIndex(PlacedObjectData placedObject, PigColor pigColor)
+        {
+            return placedObject.HasVisualToneOverride
+                ? placedObject.VisualToneIndex
+                : PigColorAtlasUtility.ResolveDefaultToneIndex(pigColor);
         }
 
         private void PickImageFile()
@@ -2106,25 +2107,25 @@ namespace PixelFlow.Editor.LevelEditing
             {
                 for (int yView = 0; yView < importedGrid.GetLength(1); yView++)
                 {
-                    var color = importedGrid[x, yView];
-                    if (color == PigColor.None)
+                    var importedCell = importedGrid[x, yView];
+                    if (importedCell.Color == PigColor.None)
                     {
                         continue;
                     }
 
-                    if (!selectedDatabase.TryGetDefaultPigPlaceable(color, out var placeable))
+                    if (!selectedDatabase.TryGetDefaultBlockPlaceable(importedCell.Color, out var placeable))
                     {
                         missingDefinitions++;
                         continue;
                     }
 
                     var yGrid = (importedGrid.GetLength(1) - 1) - yView;
-                    workingPlacedObjects.Add(new PlacedObjectData(placeable.Id, new Vector2Int(x, yGrid)));
+                    workingPlacedObjects.Add(new PlacedObjectData(placeable.Id, new Vector2Int(x, yGrid), importedCell.ToneIndex));
                 }
             }
 
             statusMessage = missingDefinitions > 0
-                ? $"Imported {sourceImage.name}. {missingDefinitions} cells were skipped because the database has no 1x1 pig definition for that color."
+                ? $"Imported {sourceImage.name}. {missingDefinitions} cells were skipped because the database has no 1x1 block definition for that color."
                 : $"Imported {sourceImage.name} into {workingGridSize.x}x{workingGridSize.y}.";
             InvalidateGridPreviewCache();
             RegenerateWorkingPigQueue();
@@ -2441,7 +2442,7 @@ namespace PixelFlow.Editor.LevelEditing
                 }
 
                 if (selectedDatabase != null
-                    && selectedDatabase.TryGetDefaultPigPlaceable(color, out var definition))
+                    && selectedDatabase.TryGetDefaultBlockPlaceable(color, out var definition))
                 {
                     var hasPreviousEntry = previousEntries.TryGetValue(color, out var previousEntry);
                     var enabled = !hasPreviousEntry || previousEntry.Enabled;
@@ -3855,7 +3856,7 @@ namespace PixelFlow.Editor.LevelEditing
                 return false;
             }
 
-            return selectedDatabase.TryGetDefaultPigPlaceable(color, out definition);
+            return selectedDatabase.TryGetDefaultBlockPlaceable(color, out definition);
         }
 
         private Color GetPaletteColor(PigColor color)

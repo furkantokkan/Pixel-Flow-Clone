@@ -224,18 +224,51 @@ namespace PixelFlow.Runtime.Data
         {
             return color switch
             {
-                PigColor.Red => new Color(0.95f, 0.28f, 0.28f),
-                PigColor.Pink => new Color(1f, 0.45f, 0.72f),
-                PigColor.Blue => new Color(0.34f, 0.62f, 1f),
-                PigColor.Green => new Color(0.34f, 0.86f, 0.45f),
-                PigColor.Yellow => new Color(1f, 0.85f, 0.25f),
-                PigColor.Orange => new Color(1f, 0.58f, 0.2f),
-                PigColor.Teal => new Color(0.12f, 0.72f, 0.72f),
-                PigColor.Purple => new Color(0.66f, 0.45f, 1f),
-                PigColor.Gray => new Color(0.62f, 0.62f, 0.62f),
-                PigColor.White => new Color(0.97f, 0.97f, 0.97f),
+                PigColor.Red => new Color32(177, 42, 42, 255),
+                PigColor.Pink => new Color32(210, 150, 195, 255),
+                PigColor.Blue => new Color32(0, 95, 191, 255),
+                PigColor.Green => new Color32(54, 189, 54, 255),
+                PigColor.Yellow => new Color32(191, 191, 63, 255),
+                PigColor.Orange => new Color32(188, 125, 40, 255),
+                PigColor.Teal => new Color32(48, 161, 172, 255),
+                PigColor.Purple => new Color32(173, 57, 173, 255),
+                PigColor.Gray => new Color32(158, 158, 158, 255),
+                PigColor.White => new Color32(200, 200, 200, 255),
                 PigColor.Black => Color.black,
                 _ => Color.clear,
+            };
+        }
+    }
+
+    public static class PigColorAtlasUtility
+    {
+        public static int ResolveColorIndex(PigColor color)
+        {
+            return color switch
+            {
+                PigColor.Red => 13,
+                PigColor.Pink => 2,
+                PigColor.Blue => 5,
+                PigColor.Green => 10,
+                PigColor.Yellow => 11,
+                PigColor.Orange => 12,
+                PigColor.Teal => 6,
+                PigColor.Purple => 4,
+                PigColor.Black => 0,
+                PigColor.Gray => 15,
+                PigColor.White => 15,
+                _ => 15,
+            };
+        }
+
+        public static int ResolveDefaultToneIndex(PigColor color)
+        {
+            return color switch
+            {
+                PigColor.Black => Core.Runtime.ColorAtlas.AtlasPaletteConstants.MinToneIndex,
+                PigColor.Gray => 9,
+                PigColor.White => Core.Runtime.ColorAtlas.AtlasPaletteConstants.MaxToneIndex,
+                _ => 13,
             };
         }
     }

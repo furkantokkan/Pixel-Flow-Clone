@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Core.Runtime.ColorAtlas;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace PixelFlow.Runtime.Data
 {
@@ -9,22 +9,22 @@ namespace PixelFlow.Runtime.Data
     {
         None = 0,
         ObstacleBlock = 1,
-        PigPinkBasic = 2,
-        PigBlueBasic = 3,
-        PigGreenBasic = 4,
-        PigYellowBasic = 5,
-        PigOrangeBasic = 6,
-        PigPurpleBasic = 7,
-        PigBlackBasic = 8,
-        PigRedBasic = 9,
-        PigTealBasic = 10,
-        PigGrayBasic = 11,
-        PigWhiteBasic = 12,
+        BlockPinkBasic = 2,
+        BlockBlueBasic = 3,
+        BlockGreenBasic = 4,
+        BlockYellowBasic = 5,
+        BlockOrangeBasic = 6,
+        BlockPurpleBasic = 7,
+        BlockBlackBasic = 8,
+        BlockRedBasic = 9,
+        BlockTealBasic = 10,
+        BlockGrayBasic = 11,
+        BlockWhiteBasic = 12,
     }
 
     public enum PlaceableKind
     {
-        Pig = 0,
+        Block = 0,
         Obstacle = 1,
     }
 
@@ -37,72 +37,6 @@ namespace PixelFlow.Runtime.Data
 
     public static class PlaceableIdUtility
     {
-        public static bool TryParseLegacyId(string legacyId, out PlaceableId placeableId)
-        {
-            switch (legacyId?.Trim())
-            {
-                case "obstacle-block":
-                    placeableId = PlaceableId.ObstacleBlock;
-                    return true;
-                case "pig-pink-basic":
-                    placeableId = PlaceableId.PigPinkBasic;
-                    return true;
-                case "pig-blue-basic":
-                    placeableId = PlaceableId.PigBlueBasic;
-                    return true;
-                case "pig-green-basic":
-                    placeableId = PlaceableId.PigGreenBasic;
-                    return true;
-                case "pig-yellow-basic":
-                    placeableId = PlaceableId.PigYellowBasic;
-                    return true;
-                case "pig-orange-basic":
-                    placeableId = PlaceableId.PigOrangeBasic;
-                    return true;
-                case "pig-purple-basic":
-                    placeableId = PlaceableId.PigPurpleBasic;
-                    return true;
-                case "pig-black-basic":
-                    placeableId = PlaceableId.PigBlackBasic;
-                    return true;
-                case "pig-red-basic":
-                    placeableId = PlaceableId.PigRedBasic;
-                    return true;
-                case "pig-teal-basic":
-                    placeableId = PlaceableId.PigTealBasic;
-                    return true;
-                case "pig-gray-basic":
-                    placeableId = PlaceableId.PigGrayBasic;
-                    return true;
-                case "pig-white-basic":
-                    placeableId = PlaceableId.PigWhiteBasic;
-                    return true;
-                default:
-                    placeableId = PlaceableId.None;
-                    return false;
-            }
-        }
-
-        public static string ToLegacyId(PlaceableId placeableId)
-        {
-            return placeableId switch
-            {
-                PlaceableId.ObstacleBlock => "obstacle-block",
-                PlaceableId.PigPinkBasic => "pig-pink-basic",
-                PlaceableId.PigBlueBasic => "pig-blue-basic",
-                PlaceableId.PigGreenBasic => "pig-green-basic",
-                PlaceableId.PigYellowBasic => "pig-yellow-basic",
-                PlaceableId.PigOrangeBasic => "pig-orange-basic",
-                PlaceableId.PigPurpleBasic => "pig-purple-basic",
-                PlaceableId.PigBlackBasic => "pig-black-basic",
-                PlaceableId.PigRedBasic => "pig-red-basic",
-                PlaceableId.PigTealBasic => "pig-teal-basic",
-                PlaceableId.PigGrayBasic => "pig-gray-basic",
-                PlaceableId.PigWhiteBasic => "pig-white-basic",
-                _ => string.Empty,
-            };
-        }
-
         public static PlaceableId GetSuggestedId(PlaceableKind kind, PigColor color)
         {
             if (kind == PlaceableKind.Obstacle)
@@ -112,17 +46,17 @@ namespace PixelFlow.Runtime.Data
 
             return color switch
             {
-                PigColor.Red => PlaceableId.PigRedBasic,
-                PigColor.Pink => PlaceableId.PigPinkBasic,
-                PigColor.Blue => PlaceableId.PigBlueBasic,
-                PigColor.Green => PlaceableId.PigGreenBasic,
-                PigColor.Yellow => PlaceableId.PigYellowBasic,
-                PigColor.Orange => PlaceableId.PigOrangeBasic,
-                PigColor.Teal => PlaceableId.PigTealBasic,
-                PigColor.Purple => PlaceableId.PigPurpleBasic,
-                PigColor.Gray => PlaceableId.PigGrayBasic,
-                PigColor.White => PlaceableId.PigWhiteBasic,
-                PigColor.Black => PlaceableId.PigBlackBasic,
+                PigColor.Red => PlaceableId.BlockRedBasic,
+                PigColor.Pink => PlaceableId.BlockPinkBasic,
+                PigColor.Blue => PlaceableId.BlockBlueBasic,
+                PigColor.Green => PlaceableId.BlockGreenBasic,
+                PigColor.Yellow => PlaceableId.BlockYellowBasic,
+                PigColor.Orange => PlaceableId.BlockOrangeBasic,
+                PigColor.Teal => PlaceableId.BlockTealBasic,
+                PigColor.Purple => PlaceableId.BlockPurpleBasic,
+                PigColor.Gray => PlaceableId.BlockGrayBasic,
+                PigColor.White => PlaceableId.BlockWhiteBasic,
+                PigColor.Black => PlaceableId.BlockBlackBasic,
                 _ => PlaceableId.None,
             };
         }
@@ -132,48 +66,38 @@ namespace PixelFlow.Runtime.Data
     public struct PlacedObjectData
     {
         [SerializeField] private PlaceableId placeableKey;
-        [SerializeField, HideInInspector, FormerlySerializedAs("placeableId")] private string legacyPlaceableId;
         [SerializeField] private Vector2Int origin;
+        [SerializeField] private bool hasVisualToneOverride;
+        [SerializeField] private int visualToneIndex;
 
         public PlacedObjectData(PlaceableId placeableId, Vector2Int origin)
         {
             placeableKey = placeableId;
-            legacyPlaceableId = PlaceableIdUtility.ToLegacyId(placeableId);
             this.origin = origin;
+            hasVisualToneOverride = false;
+            visualToneIndex = AtlasPaletteConstants.DefaultToneIndex;
+        }
+
+        public PlacedObjectData(PlaceableId placeableId, Vector2Int origin, int toneIndex)
+        {
+            placeableKey = placeableId;
+            this.origin = origin;
+            hasVisualToneOverride = true;
+            visualToneIndex = AtlasPaletteConstants.ClampToneIndex(toneIndex);
         }
 
         public PlaceableId PlaceableId => placeableKey;
-        public string LegacyPlaceableId => legacyPlaceableId;
         public Vector2Int Origin => origin;
-
-        public bool EnsureIdentity()
-        {
-            var previousPlaceableId = placeableKey;
-            var previousLegacyId = legacyPlaceableId;
-
-            if (placeableKey == PlaceableId.None
-                && PlaceableIdUtility.TryParseLegacyId(legacyPlaceableId, out var parsedId))
-            {
-                placeableKey = parsedId;
-            }
-
-            if (placeableKey != PlaceableId.None)
-            {
-                legacyPlaceableId = PlaceableIdUtility.ToLegacyId(placeableKey);
-            }
-
-            return previousPlaceableId != placeableKey
-                || !string.Equals(previousLegacyId, legacyPlaceableId, StringComparison.Ordinal);
-        }
+        public bool HasVisualToneOverride => hasVisualToneOverride;
+        public int VisualToneIndex => AtlasPaletteConstants.ClampToneIndex(visualToneIndex);
     }
 
     [Serializable]
     public sealed class PlaceableDefinition
     {
-        [SerializeField, InspectorName("PlacableID")] private PlaceableId placeableKey;
-        [SerializeField, HideInInspector, FormerlySerializedAs("id")] private string legacyId;
-        [SerializeField] private string displayName = "Placeable";
-        [SerializeField, InspectorName("Type")] private PlaceableKind kind = PlaceableKind.Pig;
+        [SerializeField, InspectorName("Block ID")] private PlaceableId placeableKey;
+        [SerializeField] private string displayName = "Block";
+        [SerializeField, InspectorName("Type")] private PlaceableKind kind = PlaceableKind.Block;
         [SerializeField] private PigColor color = PigColor.Pink;
         [SerializeField, InspectorName("Special Condition")] private PigAbilityType pigAbility = PigAbilityType.None;
         [SerializeField] private Vector2Int gridSize = Vector2Int.one;
@@ -182,7 +106,6 @@ namespace PixelFlow.Runtime.Data
         [SerializeField] private GameObject prefab;
 
         public PlaceableId Id => placeableKey;
-        public string LegacyId => legacyId;
         public string DisplayName => displayName;
         public PlaceableKind Kind => kind;
         public PigColor Color => color;
@@ -201,7 +124,7 @@ namespace PixelFlow.Runtime.Data
 
         public bool MatchesImportColor(PigColor importColor)
         {
-            return kind == PlaceableKind.Pig
+            return kind == PlaceableKind.Block
                 && GridSize == Vector2Int.one
                 && color == importColor;
         }
@@ -227,38 +150,13 @@ namespace PixelFlow.Runtime.Data
             return string.Empty;
         }
 
-        public bool MatchesIdentity(PlaceableId candidateId, string candidateLegacyId = null)
+        public bool MatchesIdentity(PlaceableId candidateId)
         {
-            if (placeableKey != PlaceableId.None)
-            {
-                if (candidateId != PlaceableId.None)
-                {
-                    return placeableKey == candidateId;
-                }
-
-                return PlaceableIdUtility.TryParseLegacyId(candidateLegacyId, out var parsedCandidateId)
-                    && placeableKey == parsedCandidateId;
-            }
-
-            if (candidateId != PlaceableId.None
-                && PlaceableIdUtility.TryParseLegacyId(legacyId, out var parsedDefinitionId))
-            {
-                return parsedDefinitionId == candidateId;
-            }
-
-            return !string.IsNullOrWhiteSpace(legacyId)
-                && !string.IsNullOrWhiteSpace(candidateLegacyId)
-                && string.Equals(legacyId, candidateLegacyId, StringComparison.OrdinalIgnoreCase);
+            return placeableKey != PlaceableId.None && placeableKey == candidateId;
         }
 
         public void EnsureIdentity(HashSet<PlaceableId> usedIds)
         {
-            if (placeableKey == PlaceableId.None
-                && PlaceableIdUtility.TryParseLegacyId(legacyId, out var parsedLegacyId))
-            {
-                placeableKey = parsedLegacyId;
-            }
-
             if (placeableKey == PlaceableId.None)
             {
                 var suggestedId = PlaceableIdUtility.GetSuggestedId(kind, color);
@@ -271,28 +169,35 @@ namespace PixelFlow.Runtime.Data
 
             if (placeableKey != PlaceableId.None)
             {
-                legacyId = PlaceableIdUtility.ToLegacyId(placeableKey);
                 usedIds?.Add(placeableKey);
             }
 
             if (string.IsNullOrWhiteSpace(displayName))
             {
                 displayName = kind == PlaceableKind.Obstacle
-                    ? "Obstacle"
-                    : $"{color} Pig";
+                    ? "Block"
+                    : $"{color} Block";
+            }
+            else if (kind == PlaceableKind.Obstacle && string.Equals(displayName, "Obstacle", StringComparison.OrdinalIgnoreCase))
+            {
+                displayName = "Block";
+            }
+            else if (kind == PlaceableKind.Block
+                && string.Equals(displayName, $"{color} Pig", StringComparison.OrdinalIgnoreCase))
+            {
+                displayName = $"{color} Block";
             }
 
             gridSize = new Vector2Int(Mathf.Max(1, gridSize.x), Mathf.Max(1, gridSize.y));
         }
 
-        public static PlaceableDefinition CreatePig(PlaceableId id, string name, PigColor color, GameObject prefab = null)
+        public static PlaceableDefinition CreateBlock(PlaceableId id, string name, PigColor color, GameObject prefab = null)
         {
             return new PlaceableDefinition
             {
                 placeableKey = id,
-                legacyId = PlaceableIdUtility.ToLegacyId(id),
                 displayName = name,
-                kind = PlaceableKind.Pig,
+                kind = PlaceableKind.Block,
                 color = color,
                 pigAbility = PigAbilityType.None,
                 gridSize = Vector2Int.one,
@@ -306,7 +211,6 @@ namespace PixelFlow.Runtime.Data
             return new PlaceableDefinition
             {
                 placeableKey = id,
-                legacyId = PlaceableIdUtility.ToLegacyId(id),
                 displayName = name,
                 kind = PlaceableKind.Obstacle,
                 color = PigColor.None,
@@ -324,14 +228,13 @@ namespace PixelFlow.Runtime.Data
     {
         [SerializeField] private string levelName = "Level";
         [SerializeField] private Vector2Int gridSize = new(12, 12);
-        [SerializeField] private Texture2D sourceImage;
+        [SerializeField, HideInInspector] private Texture2D sourceImage;
         [SerializeField] private BlockData blockData;
         [SerializeField] private ImageImportSettings importSettings = new();
-        [SerializeField] private List<PlacedObjectData> placedObjects = new();
-        [SerializeField] private List<WaitingSlotData> waitingSlots = new();
-        [SerializeField] private List<PigQueueEntry> pigQueue = new();
-        [SerializeField] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
-        [SerializeField] private ConveyorBakeData conveyorBakeData = new();
+        [SerializeField, InspectorName("Blocks")] private List<PlacedObjectData> placedObjects = new();
+        [SerializeField, InspectorName("Pig Waiting Slots")] private List<WaitingSlotData> waitingSlots = new();
+        [SerializeField, HideInInspector] private List<PigQueueEntry> pigQueue = new();
+        [SerializeField, HideInInspector] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
 
         public string LevelName
         {
@@ -373,12 +276,6 @@ namespace PixelFlow.Runtime.Data
             set => pigQueueGenerationSettings = value?.Clone() ?? new PigQueueGenerationSettings();
         }
 
-        public ConveyorBakeData ConveyorBakeData
-        {
-            get => conveyorBakeData ??= new ConveyorBakeData();
-            set => conveyorBakeData = value ?? new ConveyorBakeData();
-        }
-
         public LevelData Clone()
         {
             var clone = new LevelData
@@ -389,7 +286,6 @@ namespace PixelFlow.Runtime.Data
                 blockData = blockData,
                 importSettings = ImportSettings.Clone(),
                 pigQueueGenerationSettings = PigQueueGenerationSettings.Clone(),
-                conveyorBakeData = ConveyorBakeData,
                 placedObjects = new List<PlacedObjectData>(PlacedObjects.Count),
                 waitingSlots = new List<WaitingSlotData>(WaitingSlots.Count),
                 pigQueue = new List<PigQueueEntry>(PigQueue.Count),
@@ -426,7 +322,6 @@ namespace PixelFlow.Runtime.Data
             blockData = other.BlockData;
             importSettings = other.ImportSettings.Clone();
             pigQueueGenerationSettings = other.PigQueueGenerationSettings.Clone();
-            conveyorBakeData = other.ConveyorBakeData;
 
             PlacedObjects.Clear();
             WaitingSlots.Clear();
@@ -453,19 +348,9 @@ namespace PixelFlow.Runtime.Data
             gridSize = GridSize;
             importSettings ??= new ImageImportSettings();
             pigQueueGenerationSettings ??= new PigQueueGenerationSettings();
-            conveyorBakeData ??= new ConveyorBakeData();
             placedObjects ??= new List<PlacedObjectData>();
             waitingSlots ??= new List<WaitingSlotData>();
             pigQueue ??= new List<PigQueueEntry>();
-
-            for (int i = 0; i < placedObjects.Count; i++)
-            {
-                var placedObject = placedObjects[i];
-                if (placedObject.EnsureIdentity())
-                {
-                    placedObjects[i] = placedObject;
-                }
-            }
 
             LevelName = levelName;
         }
@@ -478,23 +363,23 @@ namespace PixelFlow.Runtime.Data
         private const string DefaultBlockPrefabGuid = "331edf6250de4de4a909c2115614f2d7";
         private const string DefaultPigPrefabGuid = "5f47c7c5de4f2ce4dbe9606dc849868f";
 #endif
-        private static readonly (PlaceableId Id, string Name, PigColor Color)[] DefaultPigPlaceables =
+        private static readonly (PlaceableId Id, string Name, PigColor Color)[] DefaultBlockPlaceables =
         {
-            (PlaceableId.PigRedBasic, "Red Pig", PigColor.Red),
-            (PlaceableId.PigPinkBasic, "Pink Pig", PigColor.Pink),
-            (PlaceableId.PigBlueBasic, "Blue Pig", PigColor.Blue),
-            (PlaceableId.PigGreenBasic, "Green Pig", PigColor.Green),
-            (PlaceableId.PigYellowBasic, "Yellow Pig", PigColor.Yellow),
-            (PlaceableId.PigOrangeBasic, "Orange Pig", PigColor.Orange),
-            (PlaceableId.PigTealBasic, "Teal Pig", PigColor.Teal),
-            (PlaceableId.PigPurpleBasic, "Purple Pig", PigColor.Purple),
-            (PlaceableId.PigGrayBasic, "Gray Pig", PigColor.Gray),
-            (PlaceableId.PigWhiteBasic, "White Pig", PigColor.White),
-            (PlaceableId.PigBlackBasic, "Black Pig", PigColor.Black),
+            (PlaceableId.BlockRedBasic, "Red Block", PigColor.Red),
+            (PlaceableId.BlockPinkBasic, "Pink Block", PigColor.Pink),
+            (PlaceableId.BlockBlueBasic, "Blue Block", PigColor.Blue),
+            (PlaceableId.BlockGreenBasic, "Green Block", PigColor.Green),
+            (PlaceableId.BlockYellowBasic, "Yellow Block", PigColor.Yellow),
+            (PlaceableId.BlockOrangeBasic, "Orange Block", PigColor.Orange),
+            (PlaceableId.BlockTealBasic, "Teal Block", PigColor.Teal),
+            (PlaceableId.BlockPurpleBasic, "Purple Block", PigColor.Purple),
+            (PlaceableId.BlockGrayBasic, "Gray Block", PigColor.Gray),
+            (PlaceableId.BlockWhiteBasic, "White Block", PigColor.White),
+            (PlaceableId.BlockBlackBasic, "Black Block", PigColor.Black),
         };
 
         [SerializeField] private List<LevelData> levels = new();
-        [SerializeField] private List<PlaceableDefinition> placeableObjects = new();
+        [SerializeField, InspectorName("Block Definitions")] private List<PlaceableDefinition> placeableObjects = new();
 
         public List<LevelData> Levels => levels ??= new List<LevelData>();
         public List<PlaceableDefinition> PlaceableObjects => placeableObjects ??= new List<PlaceableDefinition>();
@@ -533,17 +418,7 @@ namespace PixelFlow.Runtime.Data
 
         public PlaceableDefinition FindPlaceable(PlaceableId placeableId)
         {
-            return FindPlaceable(placeableId, null);
-        }
-
-        public PlaceableDefinition FindPlaceable(PlacedObjectData placedObject)
-        {
-            return FindPlaceable(placedObject.PlaceableId, placedObject.LegacyPlaceableId);
-        }
-
-        public PlaceableDefinition FindPlaceable(PlaceableId placeableId, string legacyPlaceableId)
-        {
-            if (placeableId == PlaceableId.None && string.IsNullOrWhiteSpace(legacyPlaceableId))
+            if (placeableId == PlaceableId.None)
             {
                 return null;
             }
@@ -551,7 +426,7 @@ namespace PixelFlow.Runtime.Data
             for (int i = 0; i < PlaceableObjects.Count; i++)
             {
                 var definition = PlaceableObjects[i];
-                if (definition != null && definition.MatchesIdentity(placeableId, legacyPlaceableId))
+                if (definition != null && definition.MatchesIdentity(placeableId))
                 {
                     return definition;
                 }
@@ -560,7 +435,12 @@ namespace PixelFlow.Runtime.Data
             return null;
         }
 
-        public bool TryGetDefaultPigPlaceable(PigColor color, out PlaceableDefinition definition)
+        public PlaceableDefinition FindPlaceable(PlacedObjectData placedObject)
+        {
+            return FindPlaceable(placedObject.PlaceableId);
+        }
+
+        public bool TryGetDefaultBlockPlaceable(PigColor color, out PlaceableDefinition definition)
         {
             for (int i = 0; i < PlaceableObjects.Count; i++)
             {
@@ -576,22 +456,25 @@ namespace PixelFlow.Runtime.Data
             return false;
         }
 
+        public bool TryGetDefaultPigPlaceable(PigColor color, out PlaceableDefinition definition)
+        {
+            return TryGetDefaultBlockPlaceable(color, out definition);
+        }
+
         public void ResetDefaultPlaceables()
         {
 #if UNITY_EDITOR
             var blockPrefab = LoadEditorDefaultPrefab(DefaultBlockPrefabGuid);
-            var pigPrefab = LoadEditorDefaultPrefab(DefaultPigPrefabGuid);
 #else
             GameObject blockPrefab = null;
-            GameObject pigPrefab = null;
 #endif
 
             PlaceableObjects.Clear();
             PlaceableObjects.Add(PlaceableDefinition.CreateObstacle(PlaceableId.ObstacleBlock, "Block", new UnityEngine.Color(0.15f, 0.15f, 0.15f), "X", blockPrefab));
-            for (int i = 0; i < DefaultPigPlaceables.Length; i++)
+            for (int i = 0; i < DefaultBlockPlaceables.Length; i++)
             {
-                var entry = DefaultPigPlaceables[i];
-                PlaceableObjects.Add(PlaceableDefinition.CreatePig(entry.Id, entry.Name, entry.Color, pigPrefab));
+                var entry = DefaultBlockPlaceables[i];
+                PlaceableObjects.Add(PlaceableDefinition.CreateBlock(entry.Id, entry.Name, entry.Color, blockPrefab));
             }
 
             EnsureConsistency();
@@ -616,7 +499,9 @@ namespace PixelFlow.Runtime.Data
 
                 PlaceableObjects[i].EnsureIdentity(usedIds);
 #if UNITY_EDITOR
-                if (PlaceableObjects[i].Prefab == null)
+                if (PlaceableObjects[i].Prefab == null
+                    || (PlaceableObjects[i].Kind == PlaceableKind.Block
+                        && IsEditorDefaultPrefab(PlaceableObjects[i].Prefab, DefaultPigPrefabGuid)))
                 {
                     PlaceableObjects[i].EditorAssignPrefab(ResolveEditorDefaultPrefab(PlaceableObjects[i]));
                     changed = true;
@@ -659,16 +544,16 @@ namespace PixelFlow.Runtime.Data
                 changed = true;
             }
 
-            var pigPrefab = LoadEditorDefaultPrefab(DefaultPigPrefabGuid);
-            for (int i = 0; i < DefaultPigPlaceables.Length; i++)
+            var blockPrefab = LoadEditorDefaultPrefab(DefaultBlockPrefabGuid);
+            for (int i = 0; i < DefaultBlockPlaceables.Length; i++)
             {
-                var entry = DefaultPigPlaceables[i];
+                var entry = DefaultBlockPlaceables[i];
                 if (HasPlaceable(entry.Id))
                 {
                     continue;
                 }
 
-                PlaceableObjects.Add(PlaceableDefinition.CreatePig(entry.Id, entry.Name, entry.Color, pigPrefab));
+                PlaceableObjects.Add(PlaceableDefinition.CreateBlock(entry.Id, entry.Name, entry.Color, blockPrefab));
                 changed = true;
             }
 
@@ -696,10 +581,23 @@ namespace PixelFlow.Runtime.Data
                 return null;
             }
 
-            return LoadEditorDefaultPrefab(
-                definition.Kind == PlaceableKind.Obstacle
-                    ? DefaultBlockPrefabGuid
-                    : DefaultPigPrefabGuid);
+            return LoadEditorDefaultPrefab(DefaultBlockPrefabGuid);
+        }
+
+        private static bool IsEditorDefaultPrefab(GameObject prefab, string guid)
+        {
+            if (prefab == null || string.IsNullOrWhiteSpace(guid))
+            {
+                return false;
+            }
+
+            var assetPath = UnityEditor.AssetDatabase.GetAssetPath(prefab);
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                return false;
+            }
+
+            return string.Equals(UnityEditor.AssetDatabase.AssetPathToGUID(assetPath), guid, StringComparison.OrdinalIgnoreCase);
         }
 
         private static GameObject LoadEditorDefaultPrefab(string guid)

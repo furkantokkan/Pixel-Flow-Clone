@@ -187,7 +187,7 @@ namespace PixelFlow.Runtime.Data
                 var placedObject = placedObjects[i];
                 var definition = database.FindPlaceable(placedObject);
                 if (definition == null
-                    || definition.Kind != PlaceableKind.Pig
+                    || definition.Kind != PlaceableKind.Block
                     || definition.Color == PigColor.None)
                 {
                     continue;
