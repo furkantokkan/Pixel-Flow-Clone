@@ -1,119 +1,30 @@
-using System;
 using PixelFlow.Runtime.Data;
-using PixelFlow.Runtime.Pigs;
-using PixelFlow.Runtime.Visuals;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
 namespace PixelFlow.Runtime.Composition
 {
-    [Serializable]
-    public sealed class ProjectRuntimeSettings
-    {
-        [Header("Visual Pool")]
-        [SerializeField] private PigController pigPrefab;
-        [SerializeField] private BlockVisual blockPrefab;
-        [SerializeField, Min(0)] private int pigPrewarmCount = 8;
-        [SerializeField, Min(0)] private int blockPrewarmCount = 32;
-        [SerializeField, Min(1)] private int pigMaxSize = 64;
-        [SerializeField, Min(1)] private int blockMaxSize = 256;
-
-        [Header("Game")]
-        [SerializeField] private GameObject traySlotPrefab;
-        [SerializeField, Min(0.01f)] private float dispatchFollowSpeed = 7f;
-
-        [Header("Input")]
-        [SerializeField] private LayerMask pigLayerMask = 1 << 7;
-        [SerializeField, Min(1f)] private float maxRayDistance = 500f;
-
-        public PigController PigPrefab => pigPrefab;
-        public BlockVisual BlockPrefab => blockPrefab;
-        public int PigPrewarmCount => pigPrewarmCount;
-        public int BlockPrewarmCount => blockPrewarmCount;
-        public int PigMaxSize => pigMaxSize;
-        public int BlockMaxSize => blockMaxSize;
-        public GameObject TraySlotPrefab => traySlotPrefab;
-        public float DispatchFollowSpeed => dispatchFollowSpeed;
-        public LayerMask PigLayerMask => pigLayerMask;
-        public float MaxRayDistance => maxRayDistance;
-
-        public void Normalize()
-        {
-            pigPrewarmCount = Mathf.Max(0, pigPrewarmCount);
-            blockPrewarmCount = Mathf.Max(0, blockPrewarmCount);
-            pigMaxSize = Mathf.Max(1, pigMaxSize);
-            blockMaxSize = Mathf.Max(1, blockMaxSize);
-            dispatchFollowSpeed = Mathf.Max(0.01f, dispatchFollowSpeed);
-            maxRayDistance = Mathf.Max(1f, maxRayDistance);
-
-            if (pigLayerMask.value == 0)
-            {
-                var pigLayer = LayerMask.NameToLayer("Pig");
-                pigLayerMask = pigLayer >= 0
-                    ? 1 << pigLayer
-                    : 1 << 7;
-            }
-        }
-
-#if UNITY_EDITOR
-        public void TryAutoAssignAssets()
-        {
-            pigPrefab ??= FindPrefabComponent<PigController>("Pig");
-            blockPrefab ??= FindPrefabComponent<BlockVisual>("Block");
-            traySlotPrefab ??= FindPrefabGameObject("Tray");
-            Normalize();
-        }
-
-        private static TComponent FindPrefabComponent<TComponent>(string prefabNameFilter)
-            where TComponent : Component
-        {
-            var prefabs = UnityEditor.AssetDatabase.FindAssets($"t:Prefab {prefabNameFilter}");
-            for (int i = 0; i < prefabs.Length; i++)
-            {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(prefabs[i]);
-                var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab == null)
-                {
-                    continue;
-                }
-
-                var component = prefab.GetComponentInChildren<TComponent>(true);
-                if (component != null)
-                {
-                    return component;
-                }
-            }
-
-            return null;
-        }
-
-        private static GameObject FindPrefabGameObject(string prefabNameFilter)
-        {
-            var prefabs = UnityEditor.AssetDatabase.FindAssets($"t:Prefab {prefabNameFilter}");
-            if (prefabs == null || prefabs.Length == 0)
-            {
-                return null;
-            }
-
-            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(prefabs[0]);
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        }
-#endif
-    }
-
     [DisallowMultipleComponent]
     public sealed class ProjectLifetimeScope : LifetimeScope
     {
+        private static ProjectLifetimeScope instance;
+
         [SerializeField] private ThemeDatabase themeDatabase;
         [SerializeField] private Theme defaultTheme;
         [SerializeField] private BlockData defaultBlockData;
-        [SerializeField] private ProjectRuntimeSettings runtimeSettings = new();
+        [SerializeField] private ProjectRuntimeSettings runtimeSettings;
 
         public ThemeDatabase ThemeDatabase => themeDatabase;
         public Theme DefaultTheme => defaultTheme;
         public BlockData DefaultBlockData => defaultBlockData;
         public ProjectRuntimeSettings RuntimeSettings => runtimeSettings;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            instance = null;
+        }
 
         private void Reset()
         {
@@ -123,6 +34,67 @@ namespace PixelFlow.Runtime.Composition
         private void OnValidate()
         {
             TryAutoAssignAssets();
+            runtimeSettings?.Normalize();
+        }
+
+        protected override void Awake()
+        {
+            if (Application.isPlaying)
+            {
+                if (instance != null && instance != this)
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+
+                instance = this;
+            }
+
+            base.Awake();
+        }
+
+        private void Start()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            if (instance != null && instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            instance = this;
+            DestroyDuplicateRuntimeInstances();
+        }
+
+        protected override void OnDestroy()
+        {
+            if (instance == this)
+            {
+                instance = null;
+            }
+
+            base.OnDestroy();
+        }
+
+        private void DestroyDuplicateRuntimeInstances()
+        {
+            var scopes = Resources.FindObjectsOfTypeAll<ProjectLifetimeScope>();
+            for (int i = 0; i < scopes.Length; i++)
+            {
+                var candidate = scopes[i];
+                if (candidate == null
+                    || candidate == this
+                    || !candidate.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                Destroy(candidate.gameObject);
+            }
         }
 
         protected override void Configure(IContainerBuilder builder)
@@ -144,14 +116,22 @@ namespace PixelFlow.Runtime.Composition
                 builder.RegisterInstance(defaultBlockData);
             }
 
-            builder.RegisterInstance(runtimeSettings);
+            if (runtimeSettings != null)
+            {
+                builder.RegisterInstance(runtimeSettings);
+            }
         }
 
         private void PrepareRegistrations()
         {
-            runtimeSettings ??= new ProjectRuntimeSettings();
-            runtimeSettings.Normalize();
             TryAutoAssignAssets();
+
+            if (runtimeSettings == null)
+            {
+                runtimeSettings = ScriptableObject.CreateInstance<ProjectRuntimeSettings>();
+            }
+
+            runtimeSettings.Normalize();
         }
 
         private void TryAutoAssignAssets()
@@ -172,6 +152,11 @@ namespace PixelFlow.Runtime.Composition
             if (defaultBlockData == null)
             {
                 defaultBlockData = FindFirstAsset<BlockData>();
+            }
+
+            if (runtimeSettings == null)
+            {
+                runtimeSettings = FindFirstAsset<ProjectRuntimeSettings>();
             }
 
             runtimeSettings?.TryAutoAssignAssets();

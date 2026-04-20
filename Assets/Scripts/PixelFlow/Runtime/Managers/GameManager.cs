@@ -1,9 +1,14 @@
-using System.Collections.Generic;
 using System;
-using PixelFlow.Runtime.Composition;
+using System.Collections;
+using System.Collections.Generic;
 using Dreamteck.Splines;
+using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Factories;
 using PixelFlow.Runtime.LevelEditing;
+using PixelFlow.Runtime.Levels;
 using PixelFlow.Runtime.Pigs;
+using PixelFlow.Runtime.Tray;
+using PixelFlow.Runtime.Visuals;
 using UnityEngine;
 using VContainer;
 
@@ -12,37 +17,52 @@ namespace PixelFlow.Runtime.Managers
     [DisallowMultipleComponent]
     public sealed class GameManager : MonoBehaviour
     {
-        private static readonly Vector3 QueuedPigWorldOffset = new(0f, 0.6f, 0f);
-        private static readonly Vector3 TrayIndicatorLocalPosition = Vector3.zero;
-        private static readonly Quaternion TrayIndicatorLocalRotation = Quaternion.identity;
-        private static readonly Vector3 TrayIndicatorLocalScale = Vector3.one;
+        private static int playSessionVersion;
+        private const float QueuedPigVerticalOffset = 0.6f;
+        private const float TargetSelectionEpsilon = 0.0001f;
 
-        [SerializeField] private GameObject traySlotPrefab;
         [SerializeField, Min(0.01f)] private float dispatchFollowSpeed = 7f;
+        [SerializeField, Min(0.01f)] private float traySendDuration = 0.45f;
+        [SerializeField, Min(0.01f)] private float trayReturnDuration = 0.6f;
+        [SerializeField, Min(0.01f)] private float trayTransferArcHeight = 1.5f;
 
         private readonly List<PigController> queuedPigs = new();
-        private readonly List<GameObject> trayIndicators = new();
+        private readonly List<TrayController> trayStackVisuals = new();
+        private readonly HashSet<PigController> pigsUsingTrayStack = new();
+        private readonly List<List<PigController>> waitingLanes = new();
+        private readonly Dictionary<PigController, int> pigLaneLookup = new();
+        private readonly List<PigController> activeConveyorPigs = new();
+        private readonly List<PigController> conveyorPigBuffer = new();
+
         private EnvironmentContext environment;
         private SplineComputer dispatchSpline;
-        private Transform orbitTarget;
+        private IGameFactory gameFactory;
+        private GameSceneContext sceneContext;
+        private LevelSessionController levelSessionController;
+        private int availableTrayCount;
         private int lastKnownCapacity = -1;
+        private int observedPlaySessionVersion = -1;
 
         public IReadOnlyList<PigController> QueuedPigs => queuedPigs;
         public int QueueCount => queuedPigs.Count;
         public int QueueCapacity => environment != null ? environment.ActiveHoldingContainerCount : 0;
 
-        private void Reset()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
         {
-            TryAutoAssignTrayPrefab();
+            playSessionVersion = 0;
         }
 
-        private void OnValidate()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void MarkNewPlaySession()
         {
-            TryAutoAssignTrayPrefab();
+            playSessionVersion++;
         }
 
         private void LateUpdate()
         {
+            BootstrapRuntimeIfNeeded();
+
             if (environment == null)
             {
                 return;
@@ -51,14 +71,27 @@ namespace PixelFlow.Runtime.Managers
             var capacity = QueueCapacity;
             if (capacity != lastKnownCapacity)
             {
-                RefreshQueueVisuals();
+                RefreshQueueVisuals(snapWaitingPigs: true);
             }
+
+            UpdateConveyorPigFiring();
         }
 
         [Inject]
         public void InjectProjectSettings(ProjectRuntimeSettings settings)
         {
             ApplyProjectSettings(settings);
+        }
+
+        [Inject]
+        public void InjectGameFactory(IGameFactory injectedGameFactory)
+        {
+            gameFactory = injectedGameFactory;
+        }
+
+        public void SetGameFactory(IGameFactory injectedGameFactory)
+        {
+            gameFactory = injectedGameFactory;
         }
 
         public void ApplyProjectSettings(ProjectRuntimeSettings settings)
@@ -68,19 +101,7 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
-            var trayPrefabChanged = settings.TraySlotPrefab != null && traySlotPrefab != settings.TraySlotPrefab;
-            if (trayPrefabChanged)
-            {
-                traySlotPrefab = settings.TraySlotPrefab;
-            }
-
             dispatchFollowSpeed = Mathf.Max(0.01f, settings.DispatchFollowSpeed);
-
-            if (trayPrefabChanged)
-            {
-                ClearTrayIndicators();
-                EnsureTrayIndicators();
-            }
         }
 
         public void Construct(EnvironmentContext resolvedEnvironment)
@@ -92,257 +113,1051 @@ namespace PixelFlow.Runtime.Managers
             }
 
             ResolveEnvironmentReferences();
-
-            EnsureTrayIndicators();
+            ResetTrayRuntimeState();
+            EnsureWaitingLaneCount();
+            CacheTrayStackVisuals();
+            availableTrayCount = ResolveMaxVisibleTrayCount();
             environment?.EnsureTrayCounterText();
-            RefreshQueueVisuals();
+            RefreshQueueVisuals(snapWaitingPigs: true);
+        }
+
+        public void InitializeWaitingLanes(IReadOnlyList<List<PigController>> lanes)
+        {
+            ResetWaitingLaneState();
+            EnsureWaitingLaneCount();
+
+            if (lanes != null)
+            {
+                var laneCount = Mathf.Min(lanes.Count, waitingLanes.Count);
+                for (int laneIndex = 0; laneIndex < laneCount; laneIndex++)
+                {
+                    var sourceLane = lanes[laneIndex];
+                    var targetLane = waitingLanes[laneIndex];
+                    if (sourceLane == null)
+                    {
+                        continue;
+                    }
+
+                    for (int pigIndex = 0; pigIndex < sourceLane.Count; pigIndex++)
+                    {
+                        var pig = sourceLane[pigIndex];
+                        if (pig == null)
+                        {
+                            continue;
+                        }
+
+                        pigLaneLookup[pig] = laneIndex;
+                        targetLane.Add(pig);
+                    }
+                }
+            }
+
+            RefreshQueueVisuals(snapWaitingPigs: true);
         }
 
         public bool TryQueuePig(PigController pig)
         {
-            if (pig == null || environment == null)
+            if (pig == null || environment == null || !pig.HasAmmo)
             {
                 return false;
             }
 
-            if (queuedPigs.Contains(pig))
+            if (pigLaneLookup.ContainsKey(pig) || activeConveyorPigs.Contains(pig))
             {
                 return false;
             }
 
-            if (queuedPigs.Count >= QueueCapacity)
+            EnsureWaitingLaneCount();
+            var laneIndex = ResolveFirstAvailableLaneIndex();
+            if (laneIndex < 0)
             {
                 return false;
             }
 
-            queuedPigs.Add(pig);
-            pig.SetQueued(true);
-            RealignQueuedPigs();
+            waitingLanes[laneIndex].Add(pig);
+            pigLaneLookup[pig] = laneIndex;
+            RefreshQueueVisuals(snapWaitingPigs: true);
+            return true;
+        }
+
+        public bool CanDispatchPig(PigController pig)
+        {
+            if (pig == null
+                || environment == null
+                || !pig.HasAmmo
+                || availableTrayCount <= 0
+                || !pigLaneLookup.TryGetValue(pig, out var laneIndex))
+            {
+                return false;
+            }
+
+            if (laneIndex < 0 || laneIndex >= waitingLanes.Count)
+            {
+                return false;
+            }
+
+            var lane = waitingLanes[laneIndex];
+            return lane.Count > 0
+                && lane[0] == pig
+                && pig.State == PigState.Queued;
+        }
+
+        public bool TryDispatchPig(PigController pig)
+        {
+            if (!CanDispatchPig(pig))
+            {
+                return false;
+            }
+
+            var resolvedDispatchSpline = ResolveDispatchSpline();
+            if (resolvedDispatchSpline == null)
+            {
+                Debug.LogWarning("[GameManager] Dispatch spline could not be resolved. Pig dispatch was cancelled.", this);
+                return false;
+            }
+
+            if (!TryBorrowTray(pig))
+            {
+                return false;
+            }
+
+            var laneIndex = pigLaneLookup[pig];
+            waitingLanes[laneIndex].RemoveAt(0);
+            pigLaneLookup.Remove(pig);
+
+            pig.ClearWaitingAnchor();
+            pig.SetQueued(false);
+            pig.SetOnBelt(true);
+            pig.transform.SetParent(environment.transform, true);
+
+            RegisterConveyorPig(pig);
+            pig.FollowSpline(resolvedDispatchSpline, 0.0, 1.0, dispatchFollowSpeed);
+
             RefreshQueueVisuals();
             return true;
         }
 
         public PigController DispatchNextPigToSpline()
         {
-            if (queuedPigs.Count == 0)
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
             {
-                return null;
-            }
-
-            var pig = queuedPigs[0];
-            queuedPigs.RemoveAt(0);
-            pig.SetQueued(false);
-            pig.SetOnBelt(true);
-
-            ResolveEnvironmentReferences();
-            if (dispatchSpline != null)
-            {
-                pig.FollowSpline(dispatchSpline, 0.0, 1.0, dispatchFollowSpeed, orbitTarget);
-            }
-
-            RealignQueuedPigs();
-            RefreshQueueVisuals();
-            return pig;
-        }
-
-        public void ClearQueue()
-        {
-            for (int i = 0; i < queuedPigs.Count; i++)
-            {
-                queuedPigs[i].SetQueued(false);
-                queuedPigs[i].ClearWaitingAnchor();
-            }
-
-            queuedPigs.Clear();
-            RefreshQueueVisuals();
-        }
-
-        private void RefreshQueueVisuals()
-        {
-            if (environment == null)
-            {
-                return;
-            }
-
-            TrimQueueToCapacity();
-            EnsureTrayIndicators();
-
-            for (int i = 0; i < trayIndicators.Count; i++)
-            {
-                var slot = environment.GetHoldingSlot(i);
-                trayIndicators[i].SetActive(slot != null && slot.gameObject.activeSelf);
-            }
-
-            var trayCounterText = environment.EnsureTrayCounterText();
-            if (trayCounterText != null)
-            {
-                trayCounterText.text = $"{queuedPigs.Count}/{QueueCapacity}";
-            }
-
-            lastKnownCapacity = QueueCapacity;
-            RealignQueuedPigs();
-        }
-
-        private void RealignQueuedPigs()
-        {
-            if (environment == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < queuedPigs.Count; i++)
-            {
-                var slot = environment.GetHoldingSlot(i, activeOnly: true);
-                var pig = queuedPigs[i];
-                pig.AssignWaitingAnchor(slot, snapImmediately: true, QueuedPigWorldOffset);
-                pig.SetQueued(true, snapImmediately: true);
-            }
-        }
-
-        private void TrimQueueToCapacity()
-        {
-            var capacity = QueueCapacity;
-            if (capacity < 0)
-            {
-                capacity = 0;
-            }
-
-            while (queuedPigs.Count > capacity)
-            {
-                var lastIndex = queuedPigs.Count - 1;
-                var pig = queuedPigs[lastIndex];
-                queuedPigs.RemoveAt(lastIndex);
-                pig.SetQueued(false);
-                pig.ClearWaitingAnchor();
-            }
-        }
-
-        private void EnsureTrayIndicators()
-        {
-            if (environment == null || traySlotPrefab == null || environment.HoldingContainer == null)
-            {
-                ClearTrayIndicators();
-                return;
-            }
-
-            if (!NeedsTrayIndicatorRebuild())
-            {
-                return;
-            }
-
-            ClearTrayIndicators();
-
-            for (int i = 0; i < environment.HoldingContainer.childCount; i++)
-            {
-                var slot = environment.HoldingContainer.GetChild(i);
-                if (!TryInstantiateTrayIndicator(slot, out var trayInstance))
+                var lane = waitingLanes[laneIndex];
+                if (lane.Count == 0)
                 {
                     continue;
                 }
 
-                trayInstance.name = $"QueueTray_{i + 1}";
-                trayInstance.transform.localPosition = TrayIndicatorLocalPosition;
-                trayInstance.transform.localRotation = TrayIndicatorLocalRotation;
-                trayInstance.transform.localScale = TrayIndicatorLocalScale;
-                trayIndicators.Add(trayInstance);
+                var pig = lane[0];
+                if (pig != null && TryDispatchPig(pig))
+                {
+                    return pig;
+                }
             }
+
+            return null;
         }
 
-        private bool TryInstantiateTrayIndicator(Transform parent, out GameObject trayInstance)
+        public void ClearQueue()
         {
-            trayInstance = null;
-            if (traySlotPrefab == null || parent == null)
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
             {
-                return false;
-            }
-
-            try
-            {
-                var instance = Instantiate((UnityEngine.Object)traySlotPrefab, parent, false);
-                trayInstance = instance as GameObject;
-                if (trayInstance == null && instance is Component component)
+                var lane = waitingLanes[laneIndex];
+                for (int pigIndex = 0; pigIndex < lane.Count; pigIndex++)
                 {
-                    trayInstance = component.gameObject;
+                    var pig = lane[pigIndex];
+                    if (pig == null)
+                    {
+                        continue;
+                    }
+
+                    pig.ClearWaitingAnchor();
+                    pig.SetQueued(false);
+                    pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+                    pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
                 }
 
-                return trayInstance != null;
+                lane.Clear();
             }
-            catch (InvalidCastException)
+
+            for (int pigIndex = 0; pigIndex < activeConveyorPigs.Count; pigIndex++)
             {
-                return false;
+                var pig = activeConveyorPigs[pigIndex];
+                if (pig == null)
+                {
+                    continue;
+                }
+
+                pig.ClearWaitingAnchor();
+                pig.ReturnToWaiting();
+                pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+                pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+            }
+
+            pigLaneLookup.Clear();
+            activeConveyorPigs.Clear();
+            queuedPigs.Clear();
+            ResetTrayRuntimeState();
+            trayStackVisuals.Clear();
+            lastKnownCapacity = -1;
+
+            if (environment != null)
+            {
+                RefreshQueueVisuals(snapWaitingPigs: true);
             }
         }
 
-        private void ClearTrayIndicators()
+        private void RefreshQueueVisuals(bool snapWaitingPigs = false)
         {
-            if (trayIndicators.Count == 0)
+            if (environment == null)
             {
                 return;
             }
 
-            for (int i = 0; i < trayIndicators.Count; i++)
+            EnsureWaitingLaneCount();
+            RemoveNullPigsFromLanes();
+            CacheTrayStackVisuals();
+            availableTrayCount = Mathf.Clamp(availableTrayCount, 0, ResolveMaxVisibleTrayCount());
+            UpdateTrayStackVisuals();
+            RefreshWaitingPigAnchors(snapWaitingPigs);
+            RebuildQueuedPigCache();
+
+            var trayCounterText = environment.EnsureTrayCounterText();
+            if (trayCounterText != null)
             {
-                if (trayIndicators[i] != null)
+                trayCounterText.text = $"{availableTrayCount}/{QueueCapacity}";
+            }
+
+            lastKnownCapacity = QueueCapacity;
+        }
+
+        private void RefreshWaitingPigAnchors(bool snapWaitingPigs)
+        {
+            if (environment == null)
+            {
+                return;
+            }
+
+            var depthSpacing = ResolveDeckDepthSpacing();
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                var slot = environment.GetHoldingSlot(laneIndex, activeOnly: true);
+                if (slot == null)
                 {
-                    Destroy(trayIndicators[i]);
+                    continue;
+                }
+
+                var lane = waitingLanes[laneIndex];
+                for (int depthIndex = 0; depthIndex < lane.Count; depthIndex++)
+                {
+                    var pig = lane[depthIndex];
+                    if (pig == null)
+                    {
+                        continue;
+                    }
+
+                    pigLaneLookup[pig] = laneIndex;
+                    var worldOffset = ResolveQueuedPigWorldOffset(slot, depthIndex, depthSpacing);
+                    pig.AssignWaitingAnchor(slot, snapImmediately: false, worldOffset);
+
+                    if (pig.State != PigState.ReturningToWaiting)
+                    {
+                        pig.SetQueued(true, snapImmediately: snapWaitingPigs);
+                    }
+
+                    pig.SetOnBelt(false);
+                }
+            }
+        }
+
+        private void RebuildQueuedPigCache()
+        {
+            queuedPigs.Clear();
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                var lane = waitingLanes[laneIndex];
+                if (lane.Count == 0 || lane[0] == null)
+                {
+                    continue;
+                }
+
+                queuedPigs.Add(lane[0]);
+            }
+        }
+
+        private Vector3 ResolveQueuedPigWorldOffset(Transform holdingSlot, int depthIndex, float depthSpacing)
+        {
+            var fallbackOffset = Vector3.up * QueuedPigVerticalOffset;
+            if (environment == null
+                || holdingSlot == null
+                || environment.DeckContainer == null)
+            {
+                return fallbackOffset;
+            }
+
+            var deckContainer = environment.DeckContainer;
+            var slotPositionInDeckSpace = deckContainer.InverseTransformPoint(holdingSlot.position);
+            var queuedWorldPosition = deckContainer.TransformPoint(new Vector3(
+                slotPositionInDeckSpace.x,
+                0f,
+                depthIndex * depthSpacing * ResolveDeckDepthDirection()));
+            queuedWorldPosition.y += QueuedPigVerticalOffset;
+            return queuedWorldPosition - holdingSlot.position;
+        }
+
+        private float ResolveDeckDepthSpacing()
+        {
+            if (environment == null)
+            {
+                return 1.1f;
+            }
+
+            var totalSpacing = 0f;
+            var spacingSamples = 0;
+            var previousPosition = 0f;
+            var hasPrevious = false;
+
+            for (int laneIndex = 0; laneIndex < QueueCapacity; laneIndex++)
+            {
+                var slot = environment.GetHoldingSlot(laneIndex, activeOnly: true);
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                var localPosition = environment.DeckContainer != null
+                    ? environment.DeckContainer.InverseTransformPoint(slot.position)
+                    : slot.localPosition;
+                if (hasPrevious)
+                {
+                    totalSpacing += Mathf.Abs(localPosition.x - previousPosition);
+                    spacingSamples++;
+                }
+
+                previousPosition = localPosition.x;
+                hasPrevious = true;
+            }
+
+            return spacingSamples > 0
+                ? Mathf.Max(0.9f, totalSpacing / spacingSamples)
+                : 1.1f;
+        }
+
+        private float ResolveDeckDepthDirection()
+        {
+            if (environment?.DeckContainer == null || environment.TrayEquipPos == null)
+            {
+                return -1f;
+            }
+
+            var trayLocalPosition = environment.DeckContainer.InverseTransformPoint(environment.TrayEquipPos.position);
+            return trayLocalPosition.z >= 0f ? -1f : 1f;
+        }
+
+        private void RemoveNullPigsFromLanes()
+        {
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                var lane = waitingLanes[laneIndex];
+                for (int pigIndex = lane.Count - 1; pigIndex >= 0; pigIndex--)
+                {
+                    if (lane[pigIndex] != null)
+                    {
+                        continue;
+                    }
+
+                    lane.RemoveAt(pigIndex);
                 }
             }
 
-            trayIndicators.Clear();
-        }
-
-        private bool NeedsTrayIndicatorRebuild()
-        {
-            if (environment == null || environment.HoldingContainer == null)
+            var nullPigs = new List<PigController>();
+            foreach (var pair in pigLaneLookup)
             {
-                return trayIndicators.Count > 0;
+                if (pair.Key == null)
+                {
+                    nullPigs.Add(pair.Key);
+                }
             }
 
-            if (trayIndicators.Count != environment.HoldingContainer.childCount)
+            for (int i = 0; i < nullPigs.Count; i++)
+            {
+                pigLaneLookup.Remove(nullPigs[i]);
+            }
+        }
+
+        private void EnsureWaitingLaneCount()
+        {
+            var capacity = Mathf.Max(QueueCapacity, 0);
+            while (waitingLanes.Count < capacity)
+            {
+                waitingLanes.Add(new List<PigController>());
+            }
+
+            while (waitingLanes.Count > capacity)
+            {
+                waitingLanes.RemoveAt(waitingLanes.Count - 1);
+            }
+        }
+
+        private void CacheTrayStackVisuals()
+        {
+            trayStackVisuals.Clear();
+            if (environment?.TrayRoot == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < environment.TrayRoot.childCount; i++)
+            {
+                var trayVisual = environment.TrayRoot.GetChild(i).GetComponent<TrayController>();
+                if (trayVisual != null)
+                {
+                    trayStackVisuals.Add(trayVisual);
+                }
+            }
+        }
+
+        private void UpdateTrayStackVisuals()
+        {
+            for (int i = 0; i < trayStackVisuals.Count; i++)
+            {
+                var trayVisual = trayStackVisuals[i];
+                if (trayVisual == null)
+                {
+                    continue;
+                }
+
+                trayVisual.Configure(i < availableTrayCount, occupied: true);
+            }
+        }
+
+        private int ResolveMaxVisibleTrayCount()
+        {
+            if (trayStackVisuals.Count == 0)
+            {
+                return Mathf.Max(QueueCapacity, 0);
+            }
+
+            return Mathf.Min(Mathf.Max(QueueCapacity, 0), trayStackVisuals.Count);
+        }
+
+        private bool TryBorrowTray(PigController pig)
+        {
+            if (pig == null
+                || availableTrayCount <= 0
+                || !pigsUsingTrayStack.Add(pig))
+            {
+                return false;
+            }
+
+            var trayStartPosition = ResolveTraySendStartPosition();
+            availableTrayCount = Mathf.Max(0, availableTrayCount - 1);
+            RefreshQueueVisuals();
+            StartTrayTransfer(trayStartPosition, ResolveTrayEquipPosition(), traySendDuration, incrementTrayCountOnComplete: false);
+            return true;
+        }
+
+        private void BeginReturnTray(PigController pig, Vector3 startPosition)
+        {
+            if (pig == null || !pigsUsingTrayStack.Remove(pig))
+            {
+                return;
+            }
+
+            StartTrayTransfer(startPosition, ResolveTrayReturnTargetPosition(), trayReturnDuration, incrementTrayCountOnComplete: true);
+        }
+
+        private void StartTrayTransfer(
+            Vector3 startPosition,
+            Vector3 endPosition,
+            float duration,
+            bool incrementTrayCountOnComplete)
+        {
+            if (!Application.isPlaying)
+            {
+                if (incrementTrayCountOnComplete)
+                {
+                    CompleteTrayReturn();
+                }
+
+                return;
+            }
+
+            StartCoroutine(PlayTrayTransfer(startPosition, endPosition, Mathf.Max(0.01f, duration), incrementTrayCountOnComplete));
+        }
+
+        private IEnumerator PlayTrayTransfer(
+            Vector3 startPosition,
+            Vector3 endPosition,
+            float duration,
+            bool incrementTrayCountOnComplete)
+        {
+            var trayTransform = CreateAnimatedTrayVisual(startPosition);
+            var elapsed = 0f;
+
+            while (trayTransform != null && elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var position = Vector3.Lerp(startPosition, endPosition, t);
+                position.y += Mathf.Sin(t * Mathf.PI) * trayTransferArcHeight;
+                trayTransform.position = position;
+                yield return null;
+            }
+
+            if (trayTransform != null)
+            {
+                Destroy(trayTransform.gameObject);
+            }
+
+            if (incrementTrayCountOnComplete)
+            {
+                CompleteTrayReturn();
+            }
+        }
+
+        private Transform CreateAnimatedTrayVisual(Vector3 startPosition)
+        {
+            var template = ResolveTrayAnimationTemplate();
+            if (template == null)
+            {
+                return null;
+            }
+
+            var trayObject = Instantiate(
+                template,
+                startPosition,
+                template.transform.rotation,
+                environment != null ? environment.transform : null);
+            trayObject.name = $"{template.name}_Runtime";
+
+            var trayController = trayObject.GetComponent<TrayController>();
+            if (trayController != null)
+            {
+                trayController.Configure(true, occupied: true);
+            }
+
+            return trayObject.transform;
+        }
+
+        private GameObject ResolveTrayAnimationTemplate()
+        {
+            for (int i = 0; i < trayStackVisuals.Count; i++)
+            {
+                if (trayStackVisuals[i] != null)
+                {
+                    return trayStackVisuals[i].gameObject;
+                }
+            }
+
+            return null;
+        }
+
+        private Vector3 ResolveTraySendStartPosition()
+        {
+            CacheTrayStackVisuals();
+            if (trayStackVisuals.Count > 0 && availableTrayCount > 0)
+            {
+                var trayIndex = Mathf.Clamp(availableTrayCount - 1, 0, trayStackVisuals.Count - 1);
+                var trayVisual = trayStackVisuals[trayIndex];
+                if (trayVisual != null)
+                {
+                    return trayVisual.transform.position;
+                }
+            }
+
+            return environment?.TrayRoot != null
+                ? environment.TrayRoot.position
+                : transform.position;
+        }
+
+        private Vector3 ResolveTrayEquipPosition()
+        {
+            if (environment?.TrayEquipPos != null)
+            {
+                return environment.TrayEquipPos.position;
+            }
+
+            return environment?.TrayRoot != null
+                ? environment.TrayRoot.position
+                : transform.position;
+        }
+
+        private Vector3 ResolveTrayReturnTargetPosition()
+        {
+            CacheTrayStackVisuals();
+            if (trayStackVisuals.Count > 0)
+            {
+                var trayIndex = Mathf.Clamp(availableTrayCount, 0, trayStackVisuals.Count - 1);
+                var trayVisual = trayStackVisuals[trayIndex];
+                if (trayVisual != null)
+                {
+                    return trayVisual.transform.position;
+                }
+            }
+
+            return environment?.TrayRoot != null
+                ? environment.TrayRoot.position
+                : transform.position;
+        }
+
+        private void CompleteTrayReturn()
+        {
+            availableTrayCount = Mathf.Min(ResolveMaxVisibleTrayCount(), availableTrayCount + 1);
+            RefreshQueueVisuals();
+        }
+
+        private void ResetTrayRuntimeState()
+        {
+            foreach (var pig in pigsUsingTrayStack)
+            {
+                if (pig == null)
+                {
+                    continue;
+                }
+
+                pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+                pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+            }
+
+            pigsUsingTrayStack.Clear();
+            availableTrayCount = 0;
+        }
+
+        private void ResetWaitingLaneState()
+        {
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                waitingLanes[laneIndex].Clear();
+            }
+
+            pigLaneLookup.Clear();
+            queuedPigs.Clear();
+        }
+
+        private int ResolveFirstAvailableLaneIndex()
+        {
+            EnsureWaitingLaneCount();
+            for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                if (waitingLanes[laneIndex].Count == 0)
+                {
+                    return laneIndex;
+                }
+            }
+
+            return -1;
+        }
+
+        private void RegisterConveyorPig(PigController pig)
+        {
+            if (pig == null || activeConveyorPigs.Contains(pig))
+            {
+                return;
+            }
+
+            activeConveyorPigs.Add(pig);
+            pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+            pig.ConveyorLoopCompleted += HandlePigConveyorLoopCompleted;
+            pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+        }
+
+        private void UnregisterConveyorPig(PigController pig)
+        {
+            if (pig == null)
+            {
+                return;
+            }
+
+            activeConveyorPigs.Remove(pig);
+            pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+        }
+
+        private void UpdateConveyorPigFiring()
+        {
+            if (activeConveyorPigs.Count == 0)
+            {
+                return;
+            }
+
+            conveyorPigBuffer.Clear();
+            for (int i = activeConveyorPigs.Count - 1; i >= 0; i--)
+            {
+                var pig = activeConveyorPigs[i];
+                if (pig == null || pig.State != PigState.FollowingSpline)
+                {
+                    activeConveyorPigs.RemoveAt(i);
+                    continue;
+                }
+
+                conveyorPigBuffer.Add(pig);
+            }
+
+            conveyorPigBuffer.Sort(static (left, right) => right.CurrentSplinePercent.CompareTo(left.CurrentSplinePercent));
+            for (int i = 0; i < conveyorPigBuffer.Count; i++)
+            {
+                var pig = conveyorPigBuffer[i];
+                if (pig != null && pig.CanAttemptBeltShot)
+                {
+                    TryFirePig(pig);
+                }
+            }
+        }
+
+        private bool TryFirePig(PigController pig)
+        {
+            if (pig == null || environment == null || gameFactory == null)
+            {
+                return false;
+            }
+
+            var targetBlock = FindBestTargetBlock(pig);
+            if (targetBlock == null || !pig.TryConsumeAmmo())
+            {
+                return false;
+            }
+
+            pig.NotifyBeltShotFired();
+            targetBlock.SetReserved(true);
+
+            gameFactory.CreateBullet(new BulletSpawnRequest(
+                pig.Color,
+                targetBlock.transform,
+                targetBlock,
+                new VisualSpawnPlacement(
+                    parent: environment.transform,
+                    position: pig.ProjectileOrigin.position,
+                    rotation: pig.ProjectileOrigin.rotation,
+                    useWorldSpace: true)));
+
+            if (!pig.HasAmmo)
+            {
+                HandlePigDepleted(pig);
+            }
+
+            return true;
+        }
+
+        private BlockVisual FindBestTargetBlock(PigController pig)
+        {
+            if (pig == null || environment?.BlockContainer == null)
+            {
+                return null;
+            }
+
+            var blocks = environment.BlockContainer.GetComponentsInChildren<BlockVisual>(true);
+            if (blocks == null || blocks.Length == 0)
+            {
+                return null;
+            }
+
+            var origin = pig.ProjectileOrigin.position;
+            var boardCenter = ResolveBoardCenter(blocks);
+            var inwardDirection = boardCenter - origin;
+            inwardDirection.y = 0f;
+            if (inwardDirection.sqrMagnitude <= TargetSelectionEpsilon)
+            {
+                inwardDirection = environment.BlockContainer.position - origin;
+                inwardDirection.y = 0f;
+            }
+
+            if (inwardDirection.sqrMagnitude <= TargetSelectionEpsilon)
+            {
+                inwardDirection = Vector3.forward;
+            }
+
+            inwardDirection.Normalize();
+
+            BlockVisual bestBlock = null;
+            var bestLateral = float.PositiveInfinity;
+            var bestDepth = float.PositiveInfinity;
+            var bestDistance = float.PositiveInfinity;
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                var candidate = blocks[i];
+                if (!IsValidTargetCandidate(candidate, pig.Color))
+                {
+                    continue;
+                }
+
+                var toCandidate = candidate.transform.position - origin;
+                var depth = Vector3.Dot(inwardDirection, toCandidate);
+                if (depth <= TargetSelectionEpsilon)
+                {
+                    continue;
+                }
+
+                var lateral = (toCandidate - (inwardDirection * depth)).sqrMagnitude;
+                var distance = toCandidate.sqrMagnitude;
+                if (!IsBetterTarget(lateral, depth, distance, bestLateral, bestDepth, bestDistance))
+                {
+                    continue;
+                }
+
+                bestLateral = lateral;
+                bestDepth = depth;
+                bestDistance = distance;
+                bestBlock = candidate;
+            }
+
+            if (bestBlock != null)
+            {
+                return bestBlock;
+            }
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                var candidate = blocks[i];
+                if (!IsValidTargetCandidate(candidate, pig.Color))
+                {
+                    continue;
+                }
+
+                var distance = (candidate.transform.position - origin).sqrMagnitude;
+                if (distance >= bestDistance)
+                {
+                    continue;
+                }
+
+                bestDistance = distance;
+                bestBlock = candidate;
+            }
+
+            return bestBlock;
+        }
+
+        private static bool IsBetterTarget(
+            float lateral,
+            float depth,
+            float distance,
+            float bestLateral,
+            float bestDepth,
+            float bestDistance)
+        {
+            if (lateral < bestLateral - TargetSelectionEpsilon)
             {
                 return true;
             }
 
-            for (int i = 0; i < trayIndicators.Count; i++)
+            if (Mathf.Abs(lateral - bestLateral) > TargetSelectionEpsilon)
             {
-                var slot = environment.HoldingContainer.GetChild(i);
-                var tray = trayIndicators[i];
-                if (tray == null || tray.transform.parent != slot)
-                {
-                    return true;
-                }
+                return false;
             }
 
-            return false;
+            if (depth < bestDepth - TargetSelectionEpsilon)
+            {
+                return true;
+            }
+
+            if (Mathf.Abs(depth - bestDepth) > TargetSelectionEpsilon)
+            {
+                return false;
+            }
+
+            return distance < bestDistance;
+        }
+
+        private static bool IsValidTargetCandidate(BlockVisual candidate, PixelFlow.Runtime.Data.PigColor color)
+        {
+            return candidate != null
+                && candidate.gameObject.activeInHierarchy
+                && !candidate.IsDying
+                && !candidate.IsReserved
+                && candidate.Color == color;
+        }
+
+        private static Vector3 ResolveBoardCenter(IReadOnlyList<BlockVisual> blocks)
+        {
+            var accumulated = Vector3.zero;
+            var count = 0;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                var block = blocks[i];
+                if (block == null || !block.gameObject.activeInHierarchy || block.IsDying)
+                {
+                    continue;
+                }
+
+                accumulated += block.transform.position;
+                count++;
+            }
+
+            return count > 0
+                ? accumulated / count
+                : Vector3.zero;
+        }
+
+        private void HandlePigConveyorLoopCompleted(PigController pig)
+        {
+            if (pig == null)
+            {
+                return;
+            }
+
+            UnregisterConveyorPig(pig);
+            if (!pig.HasAmmo)
+            {
+                HandlePigDepleted(pig);
+                return;
+            }
+
+            if (!TryAssignPigToReturnLane(pig))
+            {
+                BeginReturnTray(pig, ResolveTrayDropStartPosition(pig));
+                pig.ClearWaitingAnchor();
+                pig.ReturnToWaiting();
+                gameFactory?.ReleasePig(pig);
+                levelSessionController?.TriggerLevelFail();
+                RefreshQueueVisuals();
+                return;
+            }
+
+            pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+            pig.ReturnedToWaiting += HandlePigReturnedToWaiting;
+            pig.ReturnToWaiting();
+            BeginReturnTray(pig, ResolveTrayDropStartPosition(pig));
+            RefreshQueueVisuals();
+        }
+
+        private void HandlePigReturnedToWaiting(PigController pig)
+        {
+            if (pig != null)
+            {
+                pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+            }
+
+            RefreshQueueVisuals();
+        }
+
+        private bool TryAssignPigToReturnLane(PigController pig)
+        {
+            if (pig == null)
+            {
+                return false;
+            }
+
+            var laneIndex = ResolveFirstAvailableLaneIndex();
+            if (laneIndex < 0 || laneIndex >= waitingLanes.Count)
+            {
+                return false;
+            }
+
+            waitingLanes[laneIndex].Add(pig);
+            pigLaneLookup[pig] = laneIndex;
+            return true;
+        }
+
+        private void HandlePigDepleted(PigController pig)
+        {
+            if (pig == null)
+            {
+                return;
+            }
+
+            UnregisterConveyorPig(pig);
+            pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
+            pig.ClearWaitingAnchor();
+            pig.ReturnToWaiting();
+            BeginReturnTray(pig, pig.transform.position);
+            gameFactory?.ReleasePig(pig);
+            RefreshQueueVisuals();
+        }
+
+        private Vector3 ResolveTrayDropStartPosition(PigController pig)
+        {
+            if (environment?.TrayDropPos != null)
+            {
+                return environment.TrayDropPos.position;
+            }
+
+            if (pig != null)
+            {
+                return pig.transform.position;
+            }
+
+            return ResolveTrayEquipPosition();
         }
 
         private void ResolveEnvironmentReferences()
         {
+            environment?.ResolveMissingReferences();
             dispatchSpline = environment != null
                 ? environment.DispatchSpline
                 : null;
-            orbitTarget = environment != null
-                ? (environment.TrayDropPos != null ? environment.TrayDropPos : environment.TrayEquipPos)
-                : null;
         }
 
-        private void TryAutoAssignTrayPrefab()
+        private SplineComputer ResolveDispatchSpline()
         {
-#if UNITY_EDITOR
-            if (traySlotPrefab != null)
+            if (dispatchSpline != null)
+            {
+                return dispatchSpline;
+            }
+
+            ResolveEnvironmentReferences();
+            return dispatchSpline;
+        }
+
+        private void BootstrapRuntimeIfNeeded()
+        {
+            if (!Application.isPlaying)
             {
                 return;
             }
 
-            var trayGuids = UnityEditor.AssetDatabase.FindAssets("t:Prefab Tray");
-            if (trayGuids == null || trayGuids.Length == 0)
+            sceneContext ??= GetComponent<GameSceneContext>();
+            levelSessionController ??= GetComponent<LevelSessionController>();
+            if (sceneContext == null)
             {
                 return;
             }
 
-            var trayPath = UnityEditor.AssetDatabase.GUIDToAssetPath(trayGuids[0]);
-            traySlotPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(trayPath);
-#endif
+            if (observedPlaySessionVersion != playSessionVersion)
+            {
+                ResetForPlaySession();
+                observedPlaySessionVersion = playSessionVersion;
+            }
+
+            sceneContext.InitializeRuntimeSessionIfNeeded();
+            if (!sceneContext.RuntimeSessionInitialized)
+            {
+                return;
+            }
+
+            var resolvedEnvironment = environment != null && environment.gameObject != null && environment.gameObject.activeInHierarchy
+                ? environment
+                : sceneContext.EnvironmentInstance != null && sceneContext.EnvironmentInstance.gameObject != null && sceneContext.EnvironmentInstance.gameObject.activeInHierarchy
+                    ? sceneContext.EnvironmentInstance
+                    : sceneContext.EnsureEnvironment();
+
+            if (levelSessionController == null
+                || resolvedEnvironment == null)
+            {
+                return;
+            }
+
+            if (environment != resolvedEnvironment)
+            {
+                Construct(resolvedEnvironment);
+            }
+
+            if (!levelSessionController.HasLoadedInitialLevel)
+            {
+                levelSessionController.LoadSavedOrFirstLevel();
+                return;
+            }
+
+            levelSessionController.EnsureCurrentLevelLoaded();
+        }
+
+        private void ResetForPlaySession()
+        {
+            environment = null;
+            dispatchSpline = null;
+            lastKnownCapacity = -1;
+
+            ClearQueue();
+            sceneContext?.ResetRuntimeSessionState();
+            levelSessionController?.ResetForPlaySession();
         }
     }
 }

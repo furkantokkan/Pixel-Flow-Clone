@@ -1,7 +1,11 @@
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Levels;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using VContainer;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -12,11 +16,14 @@ namespace PixelFlow.Runtime.Managers
     [DisallowMultipleComponent]
     public sealed class InputManager : MonoBehaviour
     {
+        private static readonly List<RaycastResult> UiRaycastResults = new();
+
         [SerializeField, HideInInspector] private Camera inputCamera;
         [SerializeField] private LayerMask pigLayerMask = 1 << 7;
         [SerializeField, Min(1f)] private float maxRayDistance = 500f;
 
         private GameManager gameManager;
+        private LevelSessionController levelSessionController;
 
         public Camera InputCamera => ResolveActiveCamera();
 
@@ -40,32 +47,36 @@ namespace PixelFlow.Runtime.Managers
         private void Update()
         {
             var activeCamera = ResolveActiveCamera();
-            if (gameManager == null || activeCamera == null)
+            levelSessionController ??= GetComponent<LevelSessionController>();
+            if (gameManager == null
+                || activeCamera == null
+                || levelSessionController == null
+                || !levelSessionController.AcceptsInput)
             {
                 return;
             }
 
-            if (!TryGetPrimaryPointerDown(out var screenPosition))
+            if (!TryGetPrimaryPointerReleased(out var screenPosition))
             {
                 return;
             }
 
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            if (IsPointerOverBlockingUi(screenPosition))
             {
                 return;
             }
 
-            var ray = activeCamera.ScreenPointToRay(screenPosition);
-            if (!Physics.Raycast(ray, out var hit, maxRayDistance, pigLayerMask, QueryTriggerInteraction.Ignore))
+            if (!TryResolveClickedPig(activeCamera, screenPosition, out var pig))
             {
                 return;
             }
 
-            var pig = hit.collider.GetComponentInParent<PigController>();
-            if (pig != null)
+            if (!pig.HasAmmo)
             {
-                gameManager.TryQueuePig(pig);
+                return;
             }
+
+            gameManager.TryDispatchPig(pig);
         }
 
         [Inject]
@@ -154,16 +165,49 @@ namespace PixelFlow.Runtime.Managers
                 : 1 << 7;
         }
 
-        private static bool TryGetPrimaryPointerDown(out Vector2 screenPosition)
+        private bool TryResolveClickedPig(Camera activeCamera, Vector2 screenPosition, out PigController pig)
+        {
+            pig = null;
+            if (activeCamera == null)
+            {
+                return false;
+            }
+
+            var ray = activeCamera.ScreenPointToRay(screenPosition);
+            var hits = Physics.RaycastAll(ray, maxRayDistance, ~0, QueryTriggerInteraction.Ignore);
+            if (hits == null || hits.Length == 0)
+            {
+                return false;
+            }
+
+            Array.Sort(hits, static (left, right) => left.distance.CompareTo(right.distance));
+            for (int i = 0; i < hits.Length; i++)
+            {
+                var hitPig = hits[i].collider != null
+                    ? hits[i].collider.GetComponentInParent<PigController>()
+                    : null;
+                if (hitPig == null)
+                {
+                    continue;
+                }
+
+                pig = hitPig;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetPrimaryPointerReleased(out Vector2 screenPosition)
         {
 #if ENABLE_INPUT_SYSTEM
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
             {
                 screenPosition = Touchscreen.current.primaryTouch.position.ReadValue();
                 return true;
             }
 
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
             {
                 screenPosition = Mouse.current.position.ReadValue();
                 return true;
@@ -171,7 +215,7 @@ namespace PixelFlow.Runtime.Managers
 #endif
 
 #if ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonUp(0))
             {
                 screenPosition = Input.mousePosition;
                 return true;
@@ -179,6 +223,37 @@ namespace PixelFlow.Runtime.Managers
 #endif
 
             screenPosition = default;
+            return false;
+        }
+
+        private static bool IsPointerOverBlockingUi(Vector2 screenPosition)
+        {
+            if (EventSystem.current == null)
+            {
+                return false;
+            }
+
+            UiRaycastResults.Clear();
+            var pointerData = new PointerEventData(EventSystem.current)
+            {
+                position = screenPosition
+            };
+
+            EventSystem.current.RaycastAll(pointerData, UiRaycastResults);
+            for (int i = 0; i < UiRaycastResults.Count; i++)
+            {
+                var target = UiRaycastResults[i].gameObject;
+                if (target == null)
+                {
+                    continue;
+                }
+
+                if (target.GetComponentInParent<Selectable>() != null)
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
     }

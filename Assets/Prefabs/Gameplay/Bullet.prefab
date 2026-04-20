@@ -9,6 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6599655411851253765}
+  - component: {fileID: 6222222222222222225}
+  - component: {fileID: 6333333333333333336}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
@@ -32,6 +34,36 @@ Transform:
   - {fileID: 5783449335073843834}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6222222222222222225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3895675465599230721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48d31f4b57c240b89fef6117d8d7b486, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  config: {fileID: 11400000, guid: 4a64d0e1e0c44542958956af600b41d7, type: 2}
+  view: {fileID: 6333333333333333336}
+  resetParentOnDespawn: 1
+  clearViewOnDespawn: 1
+--- !u!114 &6333333333333333336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3895675465599230721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1dfb2aa30d45d4bc68951ff6f2b7f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atlasColorTarget: {fileID: 6444444444444444446}
+  trailRenderer: {fileID: 3228094296712087355}
 --- !u!1 &6378975535330470729
 GameObject:
   m_ObjectHideFlags: 0
@@ -45,6 +77,7 @@ GameObject:
   - component: {fileID: 1160974993297779865}
   - component: {fileID: 4255001274558955234}
   - component: {fileID: 3228094296712087355}
+  - component: {fileID: 6444444444444444446}
   m_Layer: 7
   m_Name: Sphere
   m_TagString: Untagged
@@ -255,5 +288,26 @@ TrailRenderer:
   m_MinVertexDistance: 0.1
   m_MaskInteraction: 0
   m_Autodestruct: 0
-  m_Emitting: 1
+  m_Emitting: 0
   m_ApplyActiveColorSpace: 1
+--- !u!114 &6444444444444444446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6378975535330470729}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51c8b5df66b43dbb633957ac6d775d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseColor: 2
+  legacyTargetRenderer: {fileID: 0}
+  renderers:
+  - {fileID: 1160974993297779865}
+  - {fileID: 3228094296712087355}
+  currentColorInfo: Pink_Pastel Outline:False Renderers:2
+  controlledRendererCount: 0
+  enableOutline: 1
+  currentColor: 1

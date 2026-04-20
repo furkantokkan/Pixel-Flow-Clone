@@ -52,7 +52,7 @@ MonoBehaviour:
   renderers: []
   currentColorInfo: Pink_Pastel Outline:False Renderers:1
   controlledRendererCount: 1
-  enableOutline: 0
+  enableOutline: 1
   currentColor: 1
 --- !u!114 &6333333333333333333
 MonoBehaviour:
@@ -66,6 +66,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35dff9180ba54ebcbc3cf4114d15a7dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  config: {fileID: 11400000, guid: 780c760507df438680304fd7ecb13e6e, type: 2}
   view: {fileID: 6444444444444444445}
   resetParentOnDespawn: 1
   clearViewOnDespawn: 1
