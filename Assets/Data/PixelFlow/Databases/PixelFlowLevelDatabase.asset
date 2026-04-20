@@ -14,15 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levels:
   - levelName: Level 1
-    gridSize: {x: 12, y: 12}
+    gridSize: {x: 8, y: 8}
     sourceImage: {fileID: 0}
     blockData: {fileID: 11400000, guid: 1ccf1d3745b049f2bc67fc6204065799, type: 2}
     importSettings:
-      targetColumns: 12
-      targetRows: 12
+      targetColumns: 8
+      targetRows: 8
       alphaThreshold: 0.1
       cropTransparentBorders: 1
       fitMode: 0
+      boardFill: 0.63
+      boardFillOverridden: 0
       imageScale: 0.2
       cellSpacing: 0.6
       verticalOffset: 0.5
@@ -61,26 +63,152 @@ MonoBehaviour:
       - color: 7
         displayColor: {r: 0, g: 0, b: 0, a: 1}
         enabled: 1
-    placedObjects: []
+    placedObjects:
+    - placeableKey: 9
+      origin: {x: 1, y: 5}
+    - placeableKey: 9
+      origin: {x: 2, y: 5}
+    - placeableKey: 9
+      origin: {x: 3, y: 5}
+    - placeableKey: 3
+      origin: {x: 1, y: 4}
+    - placeableKey: 3
+      origin: {x: 2, y: 4}
+    - placeableKey: 3
+      origin: {x: 3, y: 4}
+    - placeableKey: 4
+      origin: {x: 5, y: 5}
+    - placeableKey: 4
+      origin: {x: 5, y: 4}
     waitingSlots: []
-    pigQueue: []
+    pigQueue:
+    - color: 2
+      ammo: 3
+      slotIndex: 0
+      direction: 0
+    - color: 8
+      ammo: 3
+      slotIndex: 1
+      direction: 0
+    - color: 3
+      ammo: 2
+      slotIndex: 2
+      direction: 0
     pigQueueGenerationSettings:
       holdingSlotCount: 5
       minAmmoPerPig: 4
       targetAmmoPerPig: 6
       maxAmmoPerPig: 8
-      maxPigsPerColor: 4
+      minPigsPerColor: 4
+      maxDesiredPigsPerColor: 8
       ammoStep: 1
       ammoMultiplier: 1
       autoGenerateOnSave: 1
       autoGenerateOnImport: 1
-    conveyorBakeData:
-      sampledPoints: []
-      tangents: []
-      cumulativeDistances: []
+  - levelName: Level 2
+    gridSize: {x: 8, y: 8}
+    sourceImage: {fileID: 0}
+    blockData: {fileID: 11400000, guid: 1ccf1d3745b049f2bc67fc6204065799, type: 2}
+    importSettings:
+      targetColumns: 8
+      targetRows: 8
+      alphaThreshold: 0.1
+      cropTransparentBorders: 1
+      fitMode: 0
+      boardFill: 0.63
+      boardFillOverridden: 0
+      imageScale: 0.2
+      cellSpacing: 0.6
+      verticalOffset: 0.5
+      blockLocalScale: {x: 1, y: 1, z: 1}
+      paletteEntries:
+      - color: 8
+        displayColor: {r: 0.95, g: 0.28, b: 0.28, a: 1}
+        enabled: 1
+      - color: 1
+        displayColor: {r: 1, g: 0.45, b: 0.72, a: 1}
+        enabled: 1
+      - color: 2
+        displayColor: {r: 0.34, g: 0.62, b: 1, a: 1}
+        enabled: 1
+      - color: 3
+        displayColor: {r: 0.34, g: 0.86, b: 0.45, a: 1}
+        enabled: 1
+      - color: 4
+        displayColor: {r: 1, g: 0.85, b: 0.25, a: 1}
+        enabled: 1
+      - color: 5
+        displayColor: {r: 1, g: 0.58, b: 0.2, a: 1}
+        enabled: 1
+      - color: 9
+        displayColor: {r: 0.12, g: 0.72, b: 0.72, a: 1}
+        enabled: 1
+      - color: 6
+        displayColor: {r: 0.66, g: 0.45, b: 1, a: 1}
+        enabled: 1
+      - color: 10
+        displayColor: {r: 0.62, g: 0.62, b: 0.62, a: 1}
+        enabled: 1
+      - color: 11
+        displayColor: {r: 0.97, g: 0.97, b: 0.97, a: 1}
+        enabled: 1
+      - color: 7
+        displayColor: {r: 0, g: 0, b: 0, a: 1}
+        enabled: 1
+    placedObjects:
+    - placeableKey: 5
+      origin: {x: 2, y: 5}
+    - placeableKey: 5
+      origin: {x: 3, y: 5}
+    - placeableKey: 5
+      origin: {x: 2, y: 4}
+    - placeableKey: 5
+      origin: {x: 3, y: 4}
+    - placeableKey: 7
+      origin: {x: 5, y: 5}
+    - placeableKey: 7
+      origin: {x: 5, y: 4}
+    - placeableKey: 7
+      origin: {x: 5, y: 3}
+    - placeableKey: 6
+      origin: {x: 1, y: 2}
+    - placeableKey: 6
+      origin: {x: 2, y: 2}
+    - placeableKey: 9
+      origin: {x: 6, y: 5}
+    - placeableKey: 9
+      origin: {x: 6, y: 4}
+    waitingSlots: []
+    pigQueue:
+    - color: 4
+      ammo: 4
+      slotIndex: 0
+      direction: 0
+    - color: 6
+      ammo: 3
+      slotIndex: 1
+      direction: 0
+    - color: 5
+      ammo: 2
+      slotIndex: 2
+      direction: 0
+    - color: 8
+      ammo: 2
+      slotIndex: 3
+      direction: 0
+    pigQueueGenerationSettings:
+      holdingSlotCount: 5
+      minAmmoPerPig: 4
+      targetAmmoPerPig: 6
+      maxAmmoPerPig: 8
+      minPigsPerColor: 4
+      maxDesiredPigsPerColor: 8
+      ammoStep: 1
+      ammoMultiplier: 1
+      autoGenerateOnSave: 1
+      autoGenerateOnImport: 1
   placeableObjects:
   - placeableKey: 1
-    legacyId: obstacle-block
     displayName: Block
     kind: 1
     color: 0
@@ -90,112 +218,101 @@ MonoBehaviour:
     editorGlyph: X
     prefab: {fileID: 100100000, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 2
-    legacyId: pig-pink-basic
-    displayName: Pink Pig
+    displayName: Pink Block
     kind: 0
     color: 1
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 1, g: 0.45, b: 0.72, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 3
-    legacyId: pig-blue-basic
-    displayName: Blue Pig
+    displayName: Blue Block
     kind: 0
     color: 2
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.34, g: 0.62, b: 1, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 4
-    legacyId: pig-green-basic
-    displayName: Green Pig
+    displayName: Green Block
     kind: 0
     color: 3
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.34, g: 0.86, b: 0.45, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 5
-    legacyId: pig-yellow-basic
-    displayName: Yellow Pig
+    displayName: Yellow Block
     kind: 0
     color: 4
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 1, g: 0.85, b: 0.25, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 6
-    legacyId: pig-orange-basic
-    displayName: Orange Pig
+    displayName: Orange Block
     kind: 0
     color: 5
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 1, g: 0.58, b: 0.2, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 7
-    legacyId: pig-purple-basic
-    displayName: Purple Pig
+    displayName: Purple Block
     kind: 0
     color: 6
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.66, g: 0.45, b: 1, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 8
-    legacyId: pig-black-basic
-    displayName: Black Pig
+    displayName: Black Block
     kind: 0
     color: 7
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0, g: 0, b: 0, a: 1}
     editorGlyph: 
-    prefab: {fileID: 100100000, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 9
-    legacyId: pig-red-basic
-    displayName: Red Pig
+    displayName: Red Block
     kind: 0
     color: 8
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.95, g: 0.28, b: 0.28, a: 1}
     editorGlyph: 
-    prefab: {fileID: 6312666412539996333, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 10
-    legacyId: pig-teal-basic
-    displayName: Teal Pig
+    displayName: Teal Block
     kind: 0
     color: 9
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.12, g: 0.72, b: 0.72, a: 1}
     editorGlyph: 
-    prefab: {fileID: 6312666412539996333, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 11
-    legacyId: pig-gray-basic
-    displayName: Gray Pig
+    displayName: Gray Block
     kind: 0
     color: 10
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.62, g: 0.62, b: 0.62, a: 1}
     editorGlyph: 
-    prefab: {fileID: 6312666412539996333, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
   - placeableKey: 12
-    legacyId: pig-white-basic
-    displayName: White Pig
+    displayName: White Block
     kind: 0
     color: 11
     pigAbility: 0
     gridSize: {x: 1, y: 1}
     editorColor: {r: 0.97, g: 0.97, b: 0.97, a: 1}
     editorGlyph: 
-    prefab: {fileID: 6312666412539996333, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+    prefab: {fileID: 3187717988475333501, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}

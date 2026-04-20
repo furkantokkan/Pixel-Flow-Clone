@@ -17,7 +17,8 @@ namespace Core.Runtime.ColorAtlas
 
     public enum ColorTone
     {
-        Pastel = 13
+        Pastel = 13,
+        Highlight = 14
     }
 
     [System.Serializable]
@@ -36,5 +37,38 @@ namespace Core.Runtime.ColorAtlas
         public int GetToneIndex() => (int)tone;
         public bool SameBaseColor(AtlasColor other) => baseColor == other.baseColor;
         public override string ToString() => $"{baseColor}_{tone}";
+    }
+
+    public static class AtlasPaletteConstants
+    {
+        public const int MinColorIndex = 0;
+        public const int MaxColorIndex = 15;
+        public const int MinToneIndex = 0;
+        public const int MaxToneIndex = 14;
+        public const int DefaultToneIndex = 14;
+
+        public static int ClampColorIndex(int colorIndex)
+        {
+            if (colorIndex < MinColorIndex)
+            {
+                return MinColorIndex;
+            }
+
+            return colorIndex > MaxColorIndex
+                ? MaxColorIndex
+                : colorIndex;
+        }
+
+        public static int ClampToneIndex(int toneIndex)
+        {
+            if (toneIndex < MinToneIndex)
+            {
+                return MinToneIndex;
+            }
+
+            return toneIndex > MaxToneIndex
+                ? MaxToneIndex
+                : toneIndex;
+        }
     }
 }

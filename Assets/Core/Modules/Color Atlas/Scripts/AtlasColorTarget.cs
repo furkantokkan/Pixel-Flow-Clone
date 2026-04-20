@@ -8,8 +8,11 @@ namespace PixelFlow.Runtime.Visuals
     public sealed class AtlasColorTarget : AtlasColorController
     {
         [SerializeField] private PigColor currentColor = PigColor.Pink;
+        [SerializeField, Range(AtlasPaletteConstants.MinToneIndex, AtlasPaletteConstants.MaxToneIndex)]
+        private int currentToneIndex = AtlasPaletteConstants.DefaultToneIndex;
 
         public PigColor CurrentColor => currentColor;
+        public int CurrentToneIndex => AtlasPaletteConstants.ClampToneIndex(currentToneIndex);
 
         protected override void Awake()
         {
@@ -38,29 +41,31 @@ namespace PixelFlow.Runtime.Visuals
         public void SetColor(PigColor color)
         {
             currentColor = color;
+            currentToneIndex = PigColorAtlasUtility.ResolveDefaultToneIndex(color);
+            ApplyCurrentColor();
+        }
+
+        public void SetColor(PigColor color, int toneIndex)
+        {
+            currentColor = color;
+            currentToneIndex = AtlasPaletteConstants.ClampToneIndex(toneIndex);
             ApplyCurrentColor();
         }
 
         private void ApplyCurrentColor()
         {
-            SetColor(MapColor(currentColor));
+            SetColorAndTone(
+                PigColorAtlasUtility.ResolveColorIndex(currentColor),
+                ResolveToneIndex(currentColor, currentToneIndex));
         }
 
-        private static BaseColor MapColor(PigColor color)
+        private static int ResolveToneIndex(PigColor color, int toneIndex)
         {
-            return color switch
-            {
-                PigColor.Red => BaseColor.Red,
-                PigColor.Pink => BaseColor.Pink,
-                PigColor.Blue => BaseColor.Blue,
-                PigColor.Green => BaseColor.Green,
-                PigColor.Yellow => BaseColor.Yellow,
-                PigColor.Orange => BaseColor.Orange,
-                PigColor.Teal => BaseColor.Cyan,
-                PigColor.Purple => BaseColor.Purple,
-                PigColor.Black => BaseColor.Black,
-                _ => BaseColor.Gray
-            };
+            return color == PigColor.None
+                ? AtlasPaletteConstants.DefaultToneIndex
+                : color == PigColor.Black
+                    ? AtlasPaletteConstants.MinToneIndex
+                    : AtlasPaletteConstants.ClampToneIndex(toneIndex);
         }
     }
 }

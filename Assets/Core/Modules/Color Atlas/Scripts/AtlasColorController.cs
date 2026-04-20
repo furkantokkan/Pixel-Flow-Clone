@@ -20,8 +20,10 @@ namespace Core.Runtime.ColorAtlas
         [SerializeField] private Renderer[] renderers;
         [SerializeField, HideInInspector] private string currentColorInfo;
         [SerializeField, HideInInspector] private int controlledRendererCount;
+        [SerializeField, HideInInspector] private int colorIndexOverride = -1;
+        [SerializeField, HideInInspector] private int toneIndexOverride = -1;
         [FormerlySerializedAs("useOutline")]
-        [SerializeField] private bool enableOutline;
+        [SerializeField] private bool enableOutline = true;
 
         private MaterialPropertyBlock propertyBlock;
         private Renderer[] controlledRenderers;
@@ -87,19 +89,65 @@ namespace Core.Runtime.ColorAtlas
 
         public void SetColor(BaseColor color)
         {
-            if (baseColor == color)
+            if (baseColor == color
+                && colorIndexOverride < 0
+                && toneIndexOverride < 0)
             {
                 return;
             }
 
             baseColor = color;
+            colorIndexOverride = -1;
+            toneIndexOverride = -1;
             isDirty = true;
             ApplyColorSettings();
         }
 
         public void SetColor(AtlasColor color)
         {
-            SetColor(color.baseColor);
+            SetColorAndTone(color.GetColorIndex(), color.GetToneIndex());
+        }
+
+        public void SetColorIndex(int colorIndex)
+        {
+            var clampedColorIndex = AtlasPaletteConstants.ClampColorIndex(colorIndex);
+            if (colorIndexOverride == clampedColorIndex)
+            {
+                return;
+            }
+
+            colorIndexOverride = clampedColorIndex;
+            isDirty = true;
+            ApplyColorSettings();
+        }
+
+        public void SetToneIndex(int toneIndex)
+        {
+            var clampedToneIndex = AtlasPaletteConstants.ClampToneIndex(toneIndex);
+            if (toneIndexOverride == clampedToneIndex)
+            {
+                return;
+            }
+
+            toneIndexOverride = clampedToneIndex;
+            isDirty = true;
+            ApplyColorSettings();
+        }
+
+        public void SetColorAndTone(int colorIndex, int toneIndex)
+        {
+            var clampedColorIndex = AtlasPaletteConstants.ClampColorIndex(colorIndex);
+            var clampedToneIndex = AtlasPaletteConstants.ClampToneIndex(toneIndex);
+            if (colorIndexOverride == clampedColorIndex
+                && toneIndexOverride == clampedToneIndex)
+            {
+                return;
+            }
+
+            colorIndexOverride = clampedColorIndex;
+            toneIndexOverride = clampedToneIndex;
+            isDirty = true;
+            ApplyColorSettings();
         }
 
         public void SetOutline(bool enabled)
@@ -116,7 +164,7 @@ namespace Core.Runtime.ColorAtlas
 
         public AtlasColor GetColor()
         {
-            return new AtlasColor(baseColor, ColorTone.Pastel);
+            return new AtlasColor((BaseColor)ResolveColorIndex(), (ColorTone)ResolveToneIndex());
         }
 
         [ContextMenu("Fill Renderers")]
@@ -234,7 +282,38 @@ namespace Core.Runtime.ColorAtlas
         private static bool IsValidTargetRenderer(Renderer rendererCandidate)
         {
             return rendererCandidate != null
-                && rendererCandidate.GetComponent<TMP_Text>() == null;
+                && rendererCandidate.GetComponent<TMP_Text>() == null
+                && SupportsAtlasProperties(rendererCandidate);
+        }
+
+        private static bool SupportsAtlasProperties(Renderer rendererCandidate)
+        {
+            if (rendererCandidate == null)
+            {
+                return false;
+            }
+
+            var sharedMaterials = rendererCandidate.sharedMaterials;
+            if (sharedMaterials == null || sharedMaterials.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < sharedMaterials.Length; i++)
+            {
+                var material = sharedMaterials[i];
+                if (material == null)
+                {
+                    continue;
+                }
+
+                if (material.HasProperty(ColorIndexProperty) && material.HasProperty(ToneIndexProperty))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ApplyColorSettings()
@@ -264,8 +343,10 @@ namespace Core.Runtime.ColorAtlas
         {
             propertyBlock ??= new MaterialPropertyBlock();
             propertyBlock.Clear();
-            propertyBlock.SetFloat(ColorIndexProperty, (float)baseColor);
-            propertyBlock.SetFloat(ToneIndexProperty, (float)ColorTone.Pastel);
+            var resolvedColorIndex = ResolveColorIndex();
+            var resolvedToneIndex = ResolveToneIndex();
+            propertyBlock.SetFloat(ColorIndexProperty, resolvedColorIndex);
+            propertyBlock.SetFloat(ToneIndexProperty, resolvedToneIndex);
             propertyBlock.SetFloat(EnableOutlineProperty, enableOutline ? 1f : 0f);
 
             var appliedRendererCount = 0;
@@ -282,14 +363,30 @@ namespace Core.Runtime.ColorAtlas
             }
 
             controlledRendererCount = appliedRendererCount;
-            currentColorInfo = $"{baseColor}_{ColorTone.Pastel} Outline:{enableOutline} Renderers:{appliedRendererCount}";
+            currentColorInfo = $"Color:{resolvedColorIndex} Tone:{resolvedToneIndex} Outline:{enableOutline} Renderers:{appliedRendererCount}";
+        }
+
+        private int ResolveColorIndex()
+        {
+            return colorIndexOverride >= 0
+                ? AtlasPaletteConstants.ClampColorIndex(colorIndexOverride)
+                : AtlasPaletteConstants.ClampColorIndex((int)baseColor);
+        }
+
+        private int ResolveToneIndex()
+        {
+            return toneIndexOverride >= 0
+                ? AtlasPaletteConstants.ClampToneIndex(toneIndexOverride)
+                : AtlasPaletteConstants.DefaultToneIndex;
         }
 
 #if UNITY_EDITOR
         private void ApplyEditorMaterialSettings()
         {
             var appliedRendererCount = 0;
-            var fallbackColor = ResolveEditorPreviewColor(baseColor);
+            var resolvedColorIndex = ResolveColorIndex();
+            var resolvedToneIndex = ResolveToneIndex();
+            var fallbackColor = ResolveEditorPreviewColor(resolvedColorIndex, resolvedToneIndex);
 
             for (int i = 0; i < controlledRenderers.Length; i++)
             {
@@ -350,7 +447,7 @@ namespace Core.Runtime.ColorAtlas
             }
 
             controlledRendererCount = appliedRendererCount;
-            currentColorInfo = $"{baseColor}_{ColorTone.Pastel} EditorMaterial Renderers:{appliedRendererCount}";
+            currentColorInfo = $"Color:{resolvedColorIndex} Tone:{resolvedToneIndex} EditorMaterial Renderers:{appliedRendererCount}";
         }
 
         private void ApplyEditorMaterialColorSettings(Material material, Color fallbackColor)
@@ -360,16 +457,17 @@ namespace Core.Runtime.ColorAtlas
                 return;
             }
 
-            ApplyEditorPreviewShaderIfNeeded(material);
+            var resolvedColorIndex = ResolveColorIndex();
+            var resolvedToneIndex = ResolveToneIndex();
 
             if (material.HasProperty(ColorIndexProperty))
             {
-                material.SetFloat(ColorIndexProperty, (float)baseColor);
+                material.SetFloat(ColorIndexProperty, resolvedColorIndex);
             }
 
             if (material.HasProperty(ToneIndexProperty))
             {
-                material.SetFloat(ToneIndexProperty, (float)ColorTone.Pastel);
+                material.SetFloat(ToneIndexProperty, resolvedToneIndex);
             }
 
             if (material.HasProperty(EnableOutlineProperty))
@@ -430,58 +528,36 @@ namespace Core.Runtime.ColorAtlas
                 && !EditorUtility.IsPersistent(this);
         }
 
-        private static void ApplyEditorPreviewShaderIfNeeded(Material material)
+        private static Color ResolveEditorPreviewColor(int colorIndex, int toneIndex)
         {
-            if (material == null
-                || material.shader == null
-                || !string.Equals(material.shader.name, "Core/ColorAtlasPicker", StringComparison.Ordinal))
+            if (colorIndex <= 0)
             {
-                return;
+                return new Color32(18, 18, 20, 255);
             }
 
-            var previewShader = ResolveEditorPreviewShader();
-            if (previewShader != null && previewShader != material.shader)
-            {
-                material.shader = previewShader;
-            }
+            var previewBaseColor = ResolveEditorPreviewBaseColor(colorIndex);
+            var toneLerp = AtlasPaletteConstants.ClampToneIndex(toneIndex) / (float)AtlasPaletteConstants.MaxToneIndex;
+            var brightness = Mathf.Lerp(0.28f, 1f, toneLerp);
+            return Color.Lerp(Color.black, previewBaseColor, brightness);
         }
 
-        private static Shader ResolveEditorPreviewShader()
+        private static Color ResolveEditorPreviewBaseColor(int colorIndex)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader != null)
+            return AtlasPaletteConstants.ClampColorIndex(colorIndex) switch
             {
-                return shader;
-            }
-
-            shader = Shader.Find("Standard");
-            if (shader != null)
-            {
-                return shader;
-            }
-
-            shader = Shader.Find("Unlit/Color");
-            if (shader != null)
-            {
-                return shader;
-            }
-
-            return Shader.Find("Sprites/Default");
-        }
-
-        private static Color ResolveEditorPreviewColor(BaseColor color)
-        {
-            return color switch
-            {
-                BaseColor.Black => new Color32(18, 18, 20, 255),
-                BaseColor.Red => new Color32(255, 72, 72, 255),
-                BaseColor.Pink => new Color32(255, 111, 190, 255),
-                BaseColor.Purple => new Color32(154, 110, 244, 255),
-                BaseColor.Blue => new Color32(89, 151, 255, 255),
-                BaseColor.Cyan => new Color32(46, 194, 204, 255),
-                BaseColor.Green => new Color32(93, 215, 110, 255),
-                BaseColor.Yellow => new Color32(255, 216, 78, 255),
-                BaseColor.Orange => new Color32(255, 156, 58, 255),
+                1 => new Color32(188, 48, 48, 255),
+                2 => new Color32(210, 150, 195, 255),
+                3 => new Color32(110, 68, 156, 255),
+                4 => new Color32(173, 57, 173, 255),
+                5 => new Color32(0, 95, 191, 255),
+                6 => new Color32(48, 161, 172, 255),
+                9 => new Color32(74, 186, 82, 255),
+                10 => new Color32(54, 189, 54, 255),
+                11 => new Color32(191, 191, 63, 255),
+                12 => new Color32(188, 125, 40, 255),
+                13 => new Color32(177, 42, 42, 255),
+                14 => new Color32(128, 128, 132, 255),
+                15 => new Color32(200, 200, 200, 255),
                 _ => new Color32(184, 184, 188, 255),
             };
         }

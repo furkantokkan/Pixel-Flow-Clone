@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3507ec360d9423781f3a2133b4b3561, type: 3}
+  m_Name: PixelFlowProjectRuntimeSettings
+  m_EditorClassIdentifier: 
+  pigPrefab: {fileID: 6333333333333333334, guid: 5f47c7c5de4f2ce4dbe9606dc849868f, type: 3}
+  blockPrefab: {fileID: 6333333333333333333, guid: 331edf6250de4de4a909c2115614f2d7, type: 3}
+  bulletPrefab: {fileID: 6222222222222222225, guid: 588213267de90d9468d2c9c074486206, type: 3}
+  pigPrewarmCount: 8
+  blockPrewarmCount: 32
+  bulletPrewarmCount: 16
+  pigMaxSize: 64
+  blockMaxSize: 256
+  bulletMaxSize: 128
+  traySlotPrefab: {fileID: 6222222222222222224, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+  dispatchFollowSpeed: 7
+  pigLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  maxRayDistance: 500
