@@ -1,12 +1,10 @@
-# Pixel Flow | Image Driven Puzzle Game Template
+# Pixel Flow Clone by Furkan Tokkan
 
-<p align="center">
-  <img src="README_ASSETS/cover.svg" width="25%" />
-</p>
+Pixel Flow Clone is a Unity case study built around three goals:
 
-**Pixel Flow** is a plug and play Unity template for building image driven color matching puzzle games.
-
-Import artwork, turn it into a playable block board, generate a matching pig queue, and ship a polished puzzle loop without rebuilding the core gameplay stack from scratch.
+- turning imported artwork into playable puzzle boards
+- building a conveyor based color matching gameplay loop
+- organizing the runtime around reusable systems and mobile friendly optimizations
 
 ---
 
@@ -18,58 +16,64 @@ Import artwork, turn it into a playable block board, generate a matching pig que
   </video>
 </p>
 
-> The README is currently using `README_ASSETS/Movie_004.mp4`. If your repo host does not render inline video, replace this block with a GIF using the same section layout.
+Gameplay link: [YouTube Shorts](https://youtube.com/shorts/Nvlt_VYsPLY)
 
 ---
 
-## Screenshots
+## Project Summary
 
-<p align="center">
-  <img src="README_ASSETS/Level Editor 3.jpg" width="28%" />
-</p>
+The project started as an experiment in converting 2D artwork into a readable puzzle board. A source image is sampled into a limited color palette, translated into block placements, analyzed by exposure layers, and paired with a generated pig queue that can clear the board.
 
----
-
-## Features
-
-### Core Gameplay
-- Conveyor based dispatch loop
-- Tap to send pigs from the holding tray onto the belt
-- Automatic color matching target selection
-- Ammo based pig system with win and fail states
-- Smooth dispatch, firing, return, and deplete animations
-
-### Level Creation Workflow
-- Import PNG artwork directly into a playable grid
-- Adaptive color mapping into the Pixel Flow palette
-- Manual painting and obstacle placement in the custom level editor
-- Auto generated pig queue based on exposed block layers
-- Guaranteed completion validator for queue sanity checks
-
-### Customization
-- ScriptableObject driven level database
-- Theme database with environment prefab support
-- Block tone variation through atlas based visuals
-- Configurable ammo rules, holding slot count, and board density
-- Easy expansion for new visuals, rules, or puzzle variants
-
-### Production Ready Setup
-- 8 sample levels included
-- 16 imported sample source images included
-- Mobile and desktop pointer input support
-- Object pooling, audio hooks, and tweened runtime feedback
-- Single scene bootstrap with modular runtime composition
+At runtime the player taps pigs from the holding tray, sends them onto a spline driven conveyor, and matching pigs fire at visible blocks of the same color. Win and fail states are resolved from remaining targets, queue state, pending pig actions, and active board transitions.
 
 ---
 
-## How It Works
+## Tools and Tech
 
-1. Import a source image or paint the board manually inside the level editor.
-2. Convert the artwork into color matched blocks on a gameplay grid.
-3. Generate or edit the pig queue that will clear the exposed layers.
-4. Tap pigs into the conveyor flow and clear the entire board to complete the level.
+- Unity with URP
+- VContainer for dependency injection and runtime composition
+- PrimeTween for dispatch, deplete, and feedback animation flow
+- Dreamteck Splines for conveyor movement
+- Unity Input System for tap and pointer input
+- ScriptableObjects for levels, themes, configs, and runtime settings
+- Odin Inspector in editor tooling
+- Custom editor window for image import, board painting, queue editing, and validation
 
-No custom scene setup is required to start building levels.
+---
+
+## Level Creation Pipeline
+
+- Images are imported directly into the custom Pixel Flow level editor.
+- Transparent borders can be cropped before sampling.
+- The importer resizes artwork into board resolution and maps pixels into the PigColor palette.
+- Adaptive clustering is used during palette reduction so small image details survive better than a naive nearest color pass.
+- Generated boards are stored inside `PixelFlowLevelDatabase`.
+- Pig queues can be generated automatically from exposed layer analysis or edited manually.
+- A guaranteed completion validator checks whether the current queue can clear the board.
+
+---
+
+## Runtime Architecture
+
+- `ProjectLifetimeScope` and `GameSceneContext` bootstrap scene dependencies.
+- `LevelSessionController` loads levels, tracks win and lose state, and handles saved progression.
+- `GameManager` coordinates dispatch, targeting, burst flow, tray queue behavior, and renderer visibility through focused collaborators.
+- `ThemeDatabase` and environment prefabs keep level presentation data driven.
+- HUD flow is separated from gameplay logic through presenter style orchestration.
+
+---
+
+## Optimization Techniques
+
+- Pigs, blocks, and bullets are pooled through `VisualPoolService` instead of being instantiated during play.
+- Bullet warmup runs asynchronously to reduce first shot spikes.
+- Dispatch runtime is prewarmed after scene start to avoid early frame hitching.
+- Pig renderers are culled when they fall outside the gameplay camera viewport.
+- Pig selection uses `Physics.RaycastNonAlloc` to avoid repeated runtime allocations on input.
+- PrimeTween capacity is configured up front instead of growing at runtime.
+- The runtime enforces a target frame rate and disables vSync where needed.
+- Physics layer collisions are reduced so Pig, Bullet, and Block interactions stay focused.
+- Atlas based color and tone mapping keeps block visuals reusable without multiplying material variants.
 
 ---
 
@@ -82,21 +86,28 @@ No custom scene setup is required to start building levels.
 
 - Open `Tools > Pixel Flow > Level Editor`
 - Select `PixelFlowLevelDatabase`
-- Import an image or build the level by hand
-- Tune import settings, palette, queue rules, and holding slots
-- Save and press Play in `Assets/Scenes/GameScene.unity`
+- Import an image or paint the board manually
+- Tune palette, grid resolution, queue rules, and holding slot count
+- Validate the generated queue
+- Save and test in `Assets/Scenes/GameScene.unity`
 
 ---
 
-## Easy To Extend
+## In Game View
 
-You can:
+<p align="center">
+  <img src="README_ASSETS/Level Editor 3.jpg" width="28%" />
+</p>
 
-- Add new block types and obstacles
-- Change queue generation rules
-- Replace pigs with a different character set
-- Add boosters, blockers, or special shots
-- Expand the theme database with new environments
+---
+
+## Extension Points
+
+- add new block types or obstacle rules
+- introduce new pig abilities or shot behaviors
+- expand the queue generation heuristics
+- add more theme environments
+- split progression, meta systems, or boosters into separate layers
 
 ---
 
@@ -106,16 +117,5 @@ You can:
 2. Open `Tools > Pixel Flow > Level Editor`
 3. Pick or create a level in `PixelFlowLevelDatabase`
 4. Import artwork or place blocks manually
-5. Save, press Play, and tune the queue flow
-
----
-
-## SEO Keywords
-
-unity puzzle template, image based puzzle unity, color matching puzzle template, pixel art puzzle unity, unity level editor template, scriptableobject level database, mobile puzzle game unity, conveyor puzzle game template
-
----
-
-## Contact and Support
-
-Use this section for your store page email, Discord, or support form.
+5. Generate or edit the pig queue
+6. Press Play and iterate on readability, flow, and balance
