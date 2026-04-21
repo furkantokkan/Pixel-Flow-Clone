@@ -90,6 +90,12 @@ At runtime the player taps pigs from the holding tray, sends them onto a spline 
 
 ## Editor Workflow
 
+<p align="center">
+  <a href="https://youtu.be/OaDmTd5suIQ">
+    <img src="https://img.youtube.com/vi/OaDmTd5suIQ/0.jpg" width="50%" />
+  </a>
+</p>
+
 Level editor walkthrough: [YouTube](https://youtu.be/OaDmTd5suIQ)
 
 <p align="center">
