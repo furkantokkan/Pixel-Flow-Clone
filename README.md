@@ -8,15 +8,15 @@ Pixel Flow Clone is a Unity case study built around three goals:
 
 ---
 
-## Gameplay Preview
+## ▶ Watch Full Demo
 
 <p align="center">
-  <video src="README_ASSETS/Movie_004.mp4" poster="README_ASSETS/Level Editor 3.jpg" controls muted playsinline width="70%">
-    Your browser does not support the video tag.
-  </video>
+  <a href="https://youtube.com/shorts/Nvlt_VYsPLY">
+    <img src="https://img.youtube.com/vi/Nvlt_VYsPLY/0.jpg" width="50%" />
+  </a>
 </p>
 
-Gameplay link: [YouTube Shorts](https://youtube.com/shorts/Nvlt_VYsPLY)
+Gameplay link: [YouTube](https://youtube.com/shorts/Nvlt_VYsPLY)
 
 ---
 
