@@ -93,6 +93,17 @@ namespace PixelFlow.Editor.LevelEditing
             return null;
         }
 
+        internal bool SwapSelectedPair(IReadOnlyList<PigQueueEntry> queue)
+        {
+            if (!IsValidIndex(queue, primaryIndex) || !IsValidIndex(queue, secondaryIndex))
+            {
+                return false;
+            }
+
+            (primaryIndex, secondaryIndex) = (secondaryIndex, primaryIndex);
+            return true;
+        }
+
         internal void BeginDrag(int queueIndex, int linearIndex, Vector2 mousePosition)
         {
             dragSourceIndex = queueIndex;
@@ -161,7 +172,7 @@ namespace PixelFlow.Editor.LevelEditing
 
                 primaryIndex = queueIndex;
                 secondaryIndex = -1;
-                message = "Select a second pig with the same color to swap ammo.";
+                message = "Select a second pig with the same color to transfer ammo.";
                 return true;
             }
 

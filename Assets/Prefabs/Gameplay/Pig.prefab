@@ -64,7 +64,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 10582670d432d8d43a86556ee38b7e14, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -140,8 +140,8 @@ MonoBehaviour:
   legacyTargetRenderer: {fileID: 0}
   renderers:
   - {fileID: 3446089266476070370}
-  currentColorInfo: Color:2 Tone:13 EditorMaterial Renderers:1
-  controlledRendererCount: 0
+  currentColorInfo: Color:2 Tone:13 Outline:False Renderers:1
+  controlledRendererCount: 1
   colorIndexOverride: 2
   toneIndexOverride: 13
   enableOutline: 0

@@ -28,16 +28,27 @@ At runtime the player taps pigs from the holding tray, sends them onto a spline 
 
 ---
 
-## Tools and Tech
+## Tools, Packages, and Assets Used
 
-- Unity with URP
-- VContainer for dependency injection and runtime composition
-- PrimeTween for dispatch, deplete, and feedback animation flow
-- Dreamteck Splines for conveyor movement
-- Unity Input System for tap and pointer input
-- ScriptableObjects for levels, themes, configs, and runtime settings
-- Odin Inspector in editor tooling
-- Custom editor window for image import, board painting, queue editing, and validation
+- `VContainer` for dependency injection, scene composition, and keeping gameplay systems decoupled.
+- `Dreamteck Splines` for the conveyor path and pig movement around the board, including corner turns.
+- `PrimeTween` for pig dispatch, tray return, ammo depletion, hit feedback, and guaranteed-end speed ramp transitions.
+- `UniTask` for async warmup and non-blocking runtime preparation work such as pool prewarm flows.
+- `R3` as an available reactive layer for event driven extensions and UI facing signal orchestration.
+- `ZLinq` as an available utility package for concise allocation aware data processing in tooling and setup code.
+- `TextMesh Pro` for pig ammo labels and HUD text rendering.
+- `Odin Inspector` for faster iteration in debug and editor facing tooling.
+- `ScriptableObjects` for storing levels, themes, configs, queue data, and database style content.
+
+### Why Each One Is There
+
+- `Dreamteck Splines` solves the hardest movement requirement in the brief: pigs can keep moving on a closed conveyor while corner turns stay readable and deterministic.
+- `PrimeTween` keeps the case responsive without turning the codebase into coroutine-heavy animation glue.
+- `UniTask` helps spread warmup and pooling work across frames instead of front-loading runtime spikes.
+- `VContainer` makes it easier to split responsibilities between queue, targeting, burst, runtime warmup, and level session systems.
+- `R3` and `ZLinq` are kept in the project as part of the technical stack for cleaner event composition and lightweight data queries when extending the case further.
+- `Odin Inspector` speeds up iteration on editor and debug tooling, which matters because this case depends heavily on fast level authoring and validation.
+- `ScriptableObject` driven data keeps the project easy to extend with new levels, themes, and queue configurations without hardcoding content.
 
 ---
 
@@ -78,6 +89,8 @@ At runtime the player taps pigs from the holding tray, sends them onto a spline 
 ---
 
 ## Editor Workflow
+
+Level editor walkthrough: [YouTube](https://youtu.be/OaDmTd5suIQ)
 
 <p align="center">
   <img src="README_ASSETS/Level Editor 1.jpg" width="45%" />

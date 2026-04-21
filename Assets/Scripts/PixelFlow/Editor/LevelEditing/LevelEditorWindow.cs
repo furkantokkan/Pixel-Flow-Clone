@@ -728,7 +728,7 @@ namespace PixelFlow.Editor.LevelEditing
 
                 if (workingPigQueue.Count == 0)
                 {
-                    EditorGUILayout.HelpBox("Pig queue is empty. Use Refresh in Deck Preview to regenerate it from the current grid.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Pig queue is empty. Use Regenerate Queue to rebuild it from the current grid.", MessageType.Info);
                 }
                 else
                 {
@@ -750,7 +750,7 @@ namespace PixelFlow.Editor.LevelEditing
                         EditorGUILayout.Space(4f);
                         DrawPigQueueLanePreview(holdingContainerCount, previewColumnWidth);
                         EditorGUILayout.LabelField(
-                            "Left drag a deck card to reorder arrival order. Click cards to select same-color pigs for ammo swap.",
+                            "Left drag a deck card to reorder arrival order. Click two same-color cards to select A and B for ammo transfer.",
                             EditorStyles.wordWrappedMiniLabel);
                     }
                 }
@@ -2790,6 +2790,17 @@ namespace PixelFlow.Editor.LevelEditing
             }
         }
 
+        private bool SwapSelectedPigQueuePair()
+        {
+            if (!pigQueueEditorState.SwapSelectedPair(workingPigQueue))
+            {
+                return false;
+            }
+
+            EnsurePigQueueSelectionValid();
+            return true;
+        }
+
         private bool TryGetSelectedPigQueuePair(out int primaryIndex, out int secondaryIndex)
         {
             return pigQueueEditorState.TryGetSelectedPair(workingPigQueue, GetAmmoStep(), out primaryIndex, out secondaryIndex);
@@ -2805,14 +2816,14 @@ namespace PixelFlow.Editor.LevelEditing
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Ammo Swap", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField("Ammo Transfer", EditorStyles.miniBoldLabel);
                 if (!hasSelectionPair)
                 {
                     EditorGUILayout.LabelField(
                         "Select two same-color pigs from Deck Preview to enable ammo transfer.",
                         EditorStyles.wordWrappedMiniLabel);
                     EditorGUILayout.LabelField(
-                        "The first selected pig becomes A, the second becomes B.",
+                        "A is the source, B is the target. Use Swap to reverse the direction before pressing Transfer.",
                         EditorStyles.wordWrappedMiniLabel);
                     return;
                 }
@@ -2820,11 +2831,12 @@ namespace PixelFlow.Editor.LevelEditing
                 var primaryEntry = workingPigQueue[primaryIndex];
                 var secondaryEntry = workingPigQueue[secondaryIndex];
                 var maxTransferFromPrimaryToSecondary = GetMaximumTransferAmountBetweenPair(primaryIndex, secondaryIndex);
-                var maxTransferFromSecondaryToPrimary = GetMaximumTransferAmountBetweenPair(secondaryIndex, primaryIndex);
-                var maximumTransferAmount = Mathf.Max(maxTransferFromPrimaryToSecondary, maxTransferFromSecondaryToPrimary);
 
                 EditorGUILayout.LabelField(
-                    $"Selected {primaryEntry.Color} pigs. Transfer ammo between A and B in multiples of {ammoStep}.",
+                    $"Transfer ammo from A ({PigColorPaletteUtility.GetDisplayName(primaryEntry.Color)}) to B ({PigColorPaletteUtility.GetDisplayName(secondaryEntry.Color)}) in multiples of {ammoStep}.",
+                    EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.LabelField(
+                    "If A gives all remaining ammo, A is removed from the queue.",
                     EditorStyles.wordWrappedMiniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -2834,13 +2846,13 @@ namespace PixelFlow.Editor.LevelEditing
                     DrawSelectedPigQueueEntrySummary("B", secondaryIndex, secondaryEntry);
                 }
 
-                var hasAnyTransfer = maximumTransferAmount >= ammoStep;
+                var hasAnyTransfer = maxTransferFromPrimaryToSecondary >= ammoStep;
                 if (hasAnyTransfer)
                 {
                     pigQueueEditorState.SwapAmount = Mathf.Clamp(
                         SnapDownToStep(pigQueueEditorState.SwapAmount, ammoStep),
                         ammoStep,
-                        maximumTransferAmount);
+                        maxTransferFromPrimaryToSecondary);
                 }
                 else
                 {
@@ -2853,13 +2865,13 @@ namespace PixelFlow.Editor.LevelEditing
                         "Transfer Amount",
                         pigQueueEditorState.SwapAmount,
                         hasAnyTransfer ? ammoStep : 0,
-                        hasAnyTransfer ? maximumTransferAmount : 0);
+                        hasAnyTransfer ? maxTransferFromPrimaryToSecondary : 0);
 
                     pigQueueEditorState.SwapAmount = hasAnyTransfer
                         ? Mathf.Clamp(
                             SnapDownToStep(nextTransferAmount, ammoStep),
                             ammoStep,
-                            maximumTransferAmount)
+                            maxTransferFromPrimaryToSecondary)
                         : 0;
                 }
 
@@ -2871,14 +2883,14 @@ namespace PixelFlow.Editor.LevelEditing
                 }
 
                 EditorGUILayout.LabelField(
-                    $"A -> B max: {maxTransferFromPrimaryToSecondary}   B -> A max: {maxTransferFromSecondaryToPrimary}",
+                    $"A -> B max: {maxTransferFromPrimaryToSecondary}",
                     EditorStyles.miniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     using (new EditorGUI.DisabledScope(!CanTransferAmmoBetweenPair(primaryIndex, secondaryIndex, pigQueueEditorState.SwapAmount)))
                     {
-                        if (GUILayout.Button("A -> B", GUILayout.Width(72f)))
+                        if (GUILayout.Button("Transfer", GUILayout.Width(86f)))
                         {
                             if (TransferAmmoBetweenPair(primaryIndex, secondaryIndex, pigQueueEditorState.SwapAmount))
                             {
@@ -2887,13 +2899,13 @@ namespace PixelFlow.Editor.LevelEditing
                         }
                     }
 
-                    using (new EditorGUI.DisabledScope(!CanTransferAmmoBetweenPair(secondaryIndex, primaryIndex, pigQueueEditorState.SwapAmount)))
+                    using (new EditorGUI.DisabledScope(!hasSelectionPair))
                     {
-                        if (GUILayout.Button("B -> A", GUILayout.Width(72f)))
+                        if (GUILayout.Button("Swap", GUILayout.Width(72f)))
                         {
-                            if (TransferAmmoBetweenPair(secondaryIndex, primaryIndex, pigQueueEditorState.SwapAmount))
+                            if (SwapSelectedPigQueuePair())
                             {
-                                statusMessage = $"{pigQueueEditorState.SwapAmount} ammo moved from B to A.";
+                                statusMessage = "Swapped A and B.";
                             }
                         }
                     }
@@ -3353,14 +3365,15 @@ namespace PixelFlow.Editor.LevelEditing
                 return false;
             }
 
-            var transferAmount = SnapDownToStep(Mathf.Max(GetAmmoStep(), requestedAmount), GetAmmoStep());
-            if (transferAmount <= 0)
+            var ammoStep = GetAmmoStep();
+            if (fromEntry.Ammo < ammoStep)
             {
                 return false;
             }
 
-            return fromEntry.Ammo - transferAmount >= GetMinimumPigAmmo()
-                && toEntry.Ammo + transferAmount <= GetMaximumPigAmmo();
+            var transferAmount = SnapDownToStep(Mathf.Clamp(requestedAmount, ammoStep, fromEntry.Ammo), ammoStep);
+            return transferAmount >= ammoStep
+                && transferAmount <= fromEntry.Ammo;
         }
 
         private int GetMaximumTransferAmountBetweenPair(int fromIndex, int toIndex)
@@ -3380,28 +3393,27 @@ namespace PixelFlow.Editor.LevelEditing
             }
 
             var ammoStep = GetAmmoStep();
-            var transferableFromSource = fromEntry.Ammo - GetMinimumPigAmmo();
-            var receivableByTarget = GetMaximumPigAmmo() - toEntry.Ammo;
-            var maximumTransfer = Mathf.Min(transferableFromSource, receivableByTarget);
-            if (maximumTransfer < ammoStep)
+            if (fromEntry.Ammo < ammoStep)
             {
                 return 0;
             }
 
-            return SnapDownToStep(maximumTransfer, ammoStep);
+            return SnapDownToStep(fromEntry.Ammo, ammoStep);
         }
 
         private string BuildAmmoTransferUnavailableMessage(PigQueueEntry primaryEntry, PigQueueEntry secondaryEntry)
         {
-            var minimumAmmo = GetMinimumPigAmmo();
-            var maximumAmmo = GetMaximumPigAmmo();
-
-            if (primaryEntry.Ammo == secondaryEntry.Ammo)
+            if (primaryEntry.Color != secondaryEntry.Color)
             {
-                return $"A and B are both {primaryEntry.Ammo} ammo. Allowed ammo range is {minimumAmmo}-{maximumAmmo}, so no transfer is possible between equal values here.";
+                return "Ammo transfer only works between pigs of the same color.";
             }
 
-            return $"A has {primaryEntry.Ammo} ammo and B has {secondaryEntry.Ammo}. Allowed ammo range is {minimumAmmo}-{maximumAmmo}, so any transfer would break the configured limits.";
+            if (primaryEntry.Ammo < GetAmmoStep())
+            {
+                return $"A needs at least {GetAmmoStep()} ammo to transfer.";
+            }
+
+            return $"A has {primaryEntry.Ammo} ammo and can transfer up to all of it to B.";
         }
 
         private bool TransferAmmoBetweenPair(int fromIndex, int toIndex, int requestedAmount)
@@ -3414,6 +3426,26 @@ namespace PixelFlow.Editor.LevelEditing
             var transferAmount = SnapDownToStep(Mathf.Max(GetAmmoStep(), requestedAmount), GetAmmoStep());
             var fromEntry = workingPigQueue[fromIndex];
             var toEntry = workingPigQueue[toIndex];
+
+            if (transferAmount >= fromEntry.Ammo)
+            {
+                workingPigQueue.RemoveAt(fromIndex);
+                if (fromIndex < toIndex)
+                {
+                    toIndex--;
+                }
+
+                var updatedTargetEntry = workingPigQueue[toIndex];
+                workingPigQueue[toIndex] = new PigQueueEntry(
+                    updatedTargetEntry.Color,
+                    updatedTargetEntry.Ammo + transferAmount,
+                    updatedTargetEntry.SlotIndex,
+                    updatedTargetEntry.Direction);
+                NormalizeWorkingPigQueueSlots();
+                ResetPigQueueSelection();
+                MarkPigGuaranteeValidationDirty();
+                return true;
+            }
 
             workingPigQueue[fromIndex] = new PigQueueEntry(
                 fromEntry.Color,
@@ -3727,26 +3759,12 @@ namespace PixelFlow.Editor.LevelEditing
                 + maxLaneDepth * cellGap
                 + cellGap;
             var previewRect = GUILayoutUtility.GetRect(10f, previewHeight, GUILayout.ExpandWidth(true));
-            var refreshButtonWidth = 60f;
-            var refreshButtonRect = new Rect(
-                previewRect.x + outerPadding,
-                previewRect.y + 3f,
-                refreshButtonWidth,
-                titleHeight);
-
-            if (GUI.Button(refreshButtonRect, "Refresh", EditorStyles.miniButton))
-            {
-                RegenerateWorkingPigQueue();
-                GUI.FocusControl(null);
-                Repaint();
-                return;
-            }
 
             GUI.Label(
                 new Rect(
-                    refreshButtonRect.xMax + 8f,
+                    previewRect.x + outerPadding,
                     previewRect.y + 4f,
-                    previewRect.width - outerPadding * 3f - refreshButtonWidth - 8f,
+                    previewRect.width - outerPadding * 2f,
                     titleHeight),
                 "Deck Preview",
                 EditorStyles.miniBoldLabel);

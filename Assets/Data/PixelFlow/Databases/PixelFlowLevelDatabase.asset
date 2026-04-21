@@ -12428,6 +12428,2284 @@ MonoBehaviour:
       ammoMultiplier: 1
       autoGenerateOnSave: 1
       autoGenerateOnImport: 1
+  - levelName: Level 9
+    gridSize: {x: 32, y: 32}
+    sourceImage: {fileID: 2800000, guid: 58f835a97662991448dbdcdf6ae9e893, type: 3}
+    blockData: {fileID: 11400000, guid: 1ccf1d3745b049f2bc67fc6204065799, type: 2}
+    importSettings:
+      targetColumns: 32
+      targetRows: 32
+      alphaThreshold: 0.1
+      cropTransparentBorders: 1
+      fitMode: 0
+      boardFill: 0.75
+      boardFillOverridden: 1
+      imageScale: 0.06346241
+      cellSpacing: 0.6
+      verticalOffset: 0.5
+      blockLocalScale: {x: 1, y: 1, z: 1}
+      paletteEntries:
+      - color: 8
+        displayColor: {r: 0.9490196, g: 0.2784314, b: 0.2784314, a: 1}
+        enabled: 1
+      - color: 1
+        displayColor: {r: 1, g: 0.4509804, b: 0.72156864, a: 1}
+        enabled: 1
+      - color: 2
+        displayColor: {r: 0.28235295, g: 0.6666667, b: 1, a: 1}
+        enabled: 1
+      - color: 12
+        displayColor: {r: 0, g: 0.30588236, b: 0.61960787, a: 1}
+        enabled: 1
+      - color: 3
+        displayColor: {r: 0.34117648, g: 0.85882354, b: 0.4509804, a: 1}
+        enabled: 1
+      - color: 4
+        displayColor: {r: 1, g: 0.8509804, b: 0.2509804, a: 1}
+        enabled: 1
+      - color: 5
+        displayColor: {r: 1, g: 0.5803922, b: 0.2, a: 1}
+        enabled: 1
+      - color: 9
+        displayColor: {r: 0.12156863, g: 0.72156864, b: 0.72156864, a: 1}
+        enabled: 1
+      - color: 6
+        displayColor: {r: 0.65882355, g: 0.4509804, b: 1, a: 1}
+        enabled: 1
+      - color: 10
+        displayColor: {r: 0.61960787, g: 0.61960787, b: 0.61960787, a: 1}
+        enabled: 1
+      - color: 11
+        displayColor: {r: 0.96862745, g: 0.96862745, b: 0.96862745, a: 1}
+        enabled: 1
+      - color: 7
+        displayColor: {r: 0, g: 0, b: 0, a: 1}
+        enabled: 1
+    placedObjects:
+    - placeableKey: 5
+      origin: {x: 0, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 17}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 1, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 1, y: 11}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 2, y: 20}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 2, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 2, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 2, y: 17}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 2, y: 16}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 2, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 2, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 3, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 3, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 3, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 3, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 3, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 3, y: 16}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 3, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 3, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 3, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 3, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 4, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 4, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 4, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 4, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 4, y: 16}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 4, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 4, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 5, y: 20}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 5, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 5, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 5, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 5, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 5, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 5, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 5, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 6, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 6, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 6, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 6, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 6, y: 18}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 6, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 6, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 6, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 6, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 6, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 6, y: 3}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 6, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 6, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 7, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 7, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 7, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 7, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 7, y: 15}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 7, y: 14}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 7, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 7, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 7, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 7, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 7, y: 2}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 19}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 10}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 8, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 8, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 8, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 8, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 8, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 8, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 8, y: 2}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 20}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 16}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 15}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 13}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 9}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 9, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 9, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 9, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 9, y: 2}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 9, y: 1}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 10, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 10, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 10, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 10, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 10, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 10, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 10, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 10, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 10, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 10, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 10, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 10, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 10, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 10, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 10, y: 4}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 10, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 10, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 11, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 11, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 11, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 11, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 11, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 11, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 11, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 11, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 11, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 11, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 11, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 11, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 11, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 12, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 12, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 12, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 12, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 12, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 12, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 12, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 12, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 12, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 12, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 12, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 12, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 12, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 12, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 12, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 9, y: 14}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 13, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 13, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 13, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 13, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 13, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 13, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 13, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 13, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 13, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 13, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 13, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 13, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 13, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 13, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 13, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 13, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 13, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 13, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 31, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 14, y: 29}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 14, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 14, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 14, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 6
+      origin: {x: 14, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 14, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 14, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 14, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 14, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 14, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 14, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 14, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 14, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 14, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 14, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 14, y: 8}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 14, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 14, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 14, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 15, y: 31}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 15, y: 30}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 15, y: 29}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 15, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 15, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 15, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 5
+      origin: {x: 15, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 15, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 15, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 15, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 15, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 15, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 15, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 15, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 15, y: 8}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 15, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 15, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 15, y: 0}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 16, y: 31}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 16, y: 30}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 16, y: 29}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 16, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 16, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 16, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 16, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 16, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 16, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 16, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 16, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 16, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 16, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 16, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 16, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 11
+    - placeableKey: 5
+      origin: {x: 16, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 16, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 16, y: 0}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 17, y: 29}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 17, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 17, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 17, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 6
+      origin: {x: 17, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 17, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 17, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 17, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 17, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 17, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 17, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 17, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 17, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 17, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 17, y: 8}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 17, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 17, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 17, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 17, y: 0}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 18, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 18, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 18, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 18, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 18, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 18, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 18, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 18, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 18, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 18, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 18, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 18, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 18, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 18, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 18, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 18, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 18, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 18, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 18, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 18, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 18, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 18, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 18, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 31, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 19, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 19, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 19, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 19, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 19, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 19, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 19, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 19, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 19, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 19, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 19, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 19, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 19, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 19, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 19, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 3, y: 20}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 20, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 20, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 20, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 20, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 20, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 20, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 20, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 20, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 20, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 20, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 20, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 20, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 20, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 20, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 20, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 28}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 21, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 21, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 21, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 21, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 21, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 21, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 21, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 21, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 21, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 5}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 21, y: 4}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 21, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 21, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 22, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 22, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 22, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 22, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 22, y: 6}
+      hasVisualToneOverride: 0
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 22, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 10
+      origin: {x: 22, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 22, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 6
+      origin: {x: 22, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 22, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 27}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 23, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 23, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 23, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 23, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 23, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 23, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 23, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 23, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 6
+      origin: {x: 23, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 24, y: 26}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 24, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 24, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 24, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 24, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 24, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 24, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 24, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 24, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 4
+      origin: {x: 24, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 24, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 24, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 5
+      origin: {x: 24, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 25}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 25, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 25, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 11
+    - placeableKey: 6
+      origin: {x: 25, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 25, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 10
+      origin: {x: 25, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 25, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 6
+      origin: {x: 25, y: 3}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 25, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 24}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 26, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 26, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 26, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 4
+      origin: {x: 26, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 26, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 11
+    - placeableKey: 6
+      origin: {x: 26, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 26, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 26, y: 4}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 2}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 26, y: 1}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 23}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 27, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 27, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 27, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 4
+      origin: {x: 27, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 27, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 6}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 27, y: 5}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 28, y: 22}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 28, y: 21}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 28, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 10
+      origin: {x: 28, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 28, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 10
+    - placeableKey: 10
+      origin: {x: 28, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 12
+    - placeableKey: 6
+      origin: {x: 28, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 28, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 5
+      origin: {x: 28, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 28, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 28, y: 7}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    - placeableKey: 6
+      origin: {x: 29, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 29, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 29, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 11}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 10}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 29, y: 9}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 6
+      origin: {x: 29, y: 8}
+      hasVisualToneOverride: 1
+      visualToneIndex: 11
+    - placeableKey: 5
+      origin: {x: 30, y: 20}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 19}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 18}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 17}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 16}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 15}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 14}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 13}
+      hasVisualToneOverride: 1
+      visualToneIndex: 13
+    - placeableKey: 5
+      origin: {x: 30, y: 12}
+      hasVisualToneOverride: 1
+      visualToneIndex: 14
+    pigQueue:
+    - color: 4
+      ammo: 26
+      slotIndex: 0
+      direction: 0
+    - color: 5
+      ammo: 9
+      slotIndex: 1
+      direction: 0
+    - color: 4
+      ammo: 21
+      slotIndex: 2
+      direction: 0
+    - color: 4
+      ammo: 21
+      slotIndex: 3
+      direction: 0
+    - color: 4
+      ammo: 21
+      slotIndex: 4
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 0
+      direction: 0
+    - color: 5
+      ammo: 9
+      slotIndex: 1
+      direction: 0
+    - color: 9
+      ammo: 8
+      slotIndex: 2
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 3
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 4
+      direction: 0
+    - color: 4
+      ammo: 21
+      slotIndex: 0
+      direction: 0
+    - color: 4
+      ammo: 7
+      slotIndex: 1
+      direction: 0
+    - color: 9
+      ammo: 17
+      slotIndex: 2
+      direction: 0
+    - color: 3
+      ammo: 6
+      slotIndex: 3
+      direction: 0
+    - color: 5
+      ammo: 6
+      slotIndex: 4
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 0
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 1
+      direction: 0
+    - color: 4
+      ammo: 21
+      slotIndex: 2
+      direction: 0
+    - color: 3
+      ammo: 15
+      slotIndex: 3
+      direction: 0
+    - color: 5
+      ammo: 13
+      slotIndex: 4
+      direction: 0
+    - color: 9
+      ammo: 6
+      slotIndex: 0
+      direction: 0
+    - color: 4
+      ammo: 20
+      slotIndex: 1
+      direction: 0
+    - color: 9
+      ammo: 13
+      slotIndex: 2
+      direction: 0
+    - color: 4
+      ammo: 12
+      slotIndex: 3
+      direction: 0
+    - color: 5
+      ammo: 6
+      slotIndex: 4
+      direction: 0
+    - color: 3
+      ammo: 1
+      slotIndex: 0
+      direction: 0
+    - color: 9
+      ammo: 12
+      slotIndex: 1
+      direction: 0
+    - color: 4
+      ammo: 11
+      slotIndex: 2
+      direction: 0
+    - color: 9
+      ammo: 14
+      slotIndex: 3
+      direction: 0
+    - color: 4
+      ammo: 16
+      slotIndex: 4
+      direction: 0
+    - color: 5
+      ammo: 2
+      slotIndex: 0
+      direction: 0
+    - color: 9
+      ammo: 14
+      slotIndex: 1
+      direction: 0
+    - color: 9
+      ammo: 19
+      slotIndex: 2
+      direction: 0
+    - color: 3
+      ammo: 8
+      slotIndex: 3
+      direction: 0
+    - color: 4
+      ammo: 2
+      slotIndex: 4
+      direction: 0
+    - color: 5
+      ammo: 2
+      slotIndex: 0
+      direction: 0
+    - color: 3
+      ammo: 14
+      slotIndex: 1
+      direction: 0
+    - color: 9
+      ammo: 6
+      slotIndex: 2
+      direction: 0
+    - color: 3
+      ammo: 14
+      slotIndex: 3
+      direction: 0
+    - color: 9
+      ammo: 2
+      slotIndex: 4
+      direction: 0
+    - color: 3
+      ammo: 10
+      slotIndex: 0
+      direction: 0
+    - color: 3
+      ammo: 6
+      slotIndex: 1
+      direction: 0
+    pigQueueGenerationSettings:
+      holdingSlotCount: 5
+      minAmmoPerPig: 17
+      targetAmmoPerPig: 19
+      maxAmmoPerPig: 21
+      minPigsPerColor: 4
+      maxDesiredPigsPerColor: 8
+      ammoStep: 1
+      ammoMultiplier: 1
+      autoGenerateOnSave: 1
+      autoGenerateOnImport: 1
   placeableObjects:
   - placeableKey: 1
     displayName: Block

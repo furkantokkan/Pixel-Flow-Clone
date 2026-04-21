@@ -345,18 +345,15 @@ namespace PixelFlow.Runtime.Levels
                 return new List<PigQueueEntry>();
             }
 
-            var generatedQueueEntries = PigQueueGenerator.Generate(
+            if (level.PigQueue != null && level.PigQueue.Count > 0)
+            {
+                return new List<PigQueueEntry>(level.PigQueue);
+            }
+
+            return PigQueueGenerator.Generate(
                 level.PlacedObjects,
                 levelDatabase,
                 level.PigQueueGenerationSettings);
-            if (generatedQueueEntries.Count > 0)
-            {
-                return generatedQueueEntries;
-            }
-
-            return level.PigQueue != null
-                ? new List<PigQueueEntry>(level.PigQueue)
-                : new List<PigQueueEntry>();
         }
 
         private float[] ResolveDeckLanePositions(Transform deckRoot, int holdingSlotCount, out float laneSpacing)
