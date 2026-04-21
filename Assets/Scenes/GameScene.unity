@@ -168,17 +168,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1146743619 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1350188158383433044, guid: 5d2b9bdc56bb2784b8ad2eec9a8b0924, type: 3}
-  m_PrefabInstance: {fileID: 2083774427}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca32334579a61b049935f1aa1d10466a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1661615179
 GameObject:
   m_ObjectHideFlags: 0
@@ -327,10 +316,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameSceneCanvas
       objectReference: {fileID: 0}
-    - target: {fileID: 1040880971506104077, guid: 9b50d2f89443c7347971c74874a157c5, type: 3}
-      propertyPath: levelSessionController
-      value: 
-      objectReference: {fileID: 1146743619}
     - target: {fileID: 7667290604024885505, guid: 9b50d2f89443c7347971c74874a157c5, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -420,7 +405,7 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 1663095170793624655}
   - {fileID: 832575519}
   - {fileID: 1661615182}
   - {fileID: 2083774427}
-  - {fileID: 1663095170793624655}

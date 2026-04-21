@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 8128117136754620313}
   - component: {fileID: 2239058545566583756}
   - component: {fileID: 5135224788232669673}
-  - component: {fileID: 1040880971506104077}
   m_Layer: 5
   m_Name: GameSceneCanvas
   m_TagString: Untagged
@@ -124,18 +123,6 @@ MonoBehaviour:
   losePanel: {fileID: 3603113487699657161}
   nextLevelButton: {fileID: 6650142951874194177}
   restartButton: {fileID: 2436057977614787512}
---- !u!114 &1040880971506104077
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 820278318401177153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3480e0bd9da483b92f4e506ebf88c5e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &4750639355184538633
 GameObject:
   m_ObjectHideFlags: 0

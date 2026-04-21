@@ -23,7 +23,10 @@ namespace PixelFlow.Runtime.Tray
         private void OnValidate()
         {
             EnsureReferences();
-            Render();
+            if (!Application.isPlaying)
+            {
+                Render();
+            }
         }
 
         public void Configure(bool visible, bool occupied)

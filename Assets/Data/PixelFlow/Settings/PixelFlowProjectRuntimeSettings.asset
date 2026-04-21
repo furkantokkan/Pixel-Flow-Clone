@@ -21,8 +21,16 @@ MonoBehaviour:
   pigMaxSize: 64
   blockMaxSize: 256
   bulletMaxSize: 128
-  traySlotPrefab: {fileID: 6222222222222222224, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
   dispatchFollowSpeed: 7
+  traySendDuration: 0.45
+  trayReturnDuration: 0.6
+  trayTransferArcHeight: 1.5
+  beltShotOriginForwardOffset: 0.8
+  beltShotRadius: 0.4
+  beltShotDistance: 20
+  burstFollowSpeedMultiplier: 1.85
+  burstRampDuration: 0.35
+  burstFireIntervalMultiplier: 0.7
   pigLayerMask:
     serializedVersion: 2
     m_Bits: 128

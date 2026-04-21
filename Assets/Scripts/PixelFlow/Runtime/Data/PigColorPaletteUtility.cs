@@ -44,6 +44,33 @@ namespace PixelFlow.Runtime.Data
             return DefaultBrushColors;
         }
 
+        public static Color GetAtlasPreviewColor(PigColor color, int toneIndex = -1)
+        {
+            if (color == PigColor.None)
+            {
+                return Color.clear;
+            }
+
+            var resolvedToneIndex = toneIndex >= 0
+                ? Core.Runtime.ColorAtlas.AtlasPaletteConstants.ClampToneIndex(toneIndex)
+                : PigColorAtlasUtility.ResolveDefaultToneIndex(color);
+            return GetAtlasPreviewColor(PigColorAtlasUtility.ResolveColorIndex(color), resolvedToneIndex);
+        }
+
+        public static Color GetAtlasPreviewColor(int colorIndex, int toneIndex)
+        {
+            if (colorIndex <= 0)
+            {
+                return new Color32(18, 18, 20, 255);
+            }
+
+            var previewBaseColor = ResolveAtlasPreviewBaseColor(colorIndex);
+            var clampedToneIndex = Core.Runtime.ColorAtlas.AtlasPaletteConstants.ClampToneIndex(toneIndex);
+            var toneLerp = clampedToneIndex / (float)Core.Runtime.ColorAtlas.AtlasPaletteConstants.MaxToneIndex;
+            var brightness = Mathf.Lerp(0.28f, 1f, toneLerp);
+            return Color.Lerp(Color.black, previewBaseColor, brightness);
+        }
+
         public static void EnsurePaletteEntries(List<PigColorPaletteEntry> paletteEntries)
         {
             if (paletteEntries == null)
@@ -224,18 +251,39 @@ namespace PixelFlow.Runtime.Data
         {
             return color switch
             {
-                PigColor.Red => new Color32(177, 42, 42, 255),
-                PigColor.Pink => new Color32(210, 150, 195, 255),
-                PigColor.Blue => new Color32(0, 95, 191, 255),
-                PigColor.Green => new Color32(54, 189, 54, 255),
-                PigColor.Yellow => new Color32(191, 191, 63, 255),
-                PigColor.Orange => new Color32(188, 125, 40, 255),
-                PigColor.Teal => new Color32(48, 161, 172, 255),
-                PigColor.Purple => new Color32(173, 57, 173, 255),
+                PigColor.Red => new Color32(242, 71, 71, 255),
+                PigColor.Pink => new Color32(255, 115, 184, 255),
+                PigColor.Blue => new Color32(87, 158, 255, 255),
+                PigColor.Green => new Color32(87, 219, 115, 255),
+                PigColor.Yellow => new Color32(255, 217, 64, 255),
+                PigColor.Orange => new Color32(255, 148, 51, 255),
+                PigColor.Teal => new Color32(31, 184, 184, 255),
+                PigColor.Purple => new Color32(168, 115, 255, 255),
                 PigColor.Gray => new Color32(158, 158, 158, 255),
-                PigColor.White => new Color32(200, 200, 200, 255),
+                PigColor.White => new Color32(247, 247, 247, 255),
                 PigColor.Black => Color.black,
                 _ => Color.clear,
+            };
+        }
+
+        private static Color ResolveAtlasPreviewBaseColor(int colorIndex)
+        {
+            return Core.Runtime.ColorAtlas.AtlasPaletteConstants.ClampColorIndex(colorIndex) switch
+            {
+                1 => new Color32(188, 48, 48, 255),
+                2 => new Color32(210, 150, 195, 255),
+                3 => new Color32(110, 68, 156, 255),
+                4 => new Color32(173, 57, 173, 255),
+                5 => new Color32(0, 95, 191, 255),
+                6 => new Color32(48, 161, 172, 255),
+                9 => new Color32(74, 186, 82, 255),
+                10 => new Color32(54, 189, 54, 255),
+                11 => new Color32(191, 191, 63, 255),
+                12 => new Color32(188, 125, 40, 255),
+                13 => new Color32(177, 42, 42, 255),
+                14 => new Color32(128, 128, 132, 255),
+                15 => new Color32(200, 200, 200, 255),
+                _ => new Color32(184, 184, 188, 255),
             };
         }
     }

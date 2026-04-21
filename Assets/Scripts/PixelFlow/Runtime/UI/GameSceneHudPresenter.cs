@@ -1,82 +1,60 @@
+using System;
 using PixelFlow.Runtime.Levels;
 using UnityEngine;
-using VContainer;
+using VContainer.Unity;
 
 namespace PixelFlow.Runtime.UI
 {
-    [DisallowMultipleComponent]
-    [RequireComponent(typeof(GameSceneHudView))]
-    public sealed class GameSceneHudPresenter : MonoBehaviour
+    public sealed class GameSceneHudPresenter : IInitializable, IDisposable
     {
-        private GameSceneHudView view;
-        private LevelSessionController levelSessionController;
+        private const float OutcomeButtonLockDuration = 0.35f;
+
+        private readonly GameSceneHudView view;
+        private readonly LevelSessionController levelSessionController;
 
         private LevelSessionController subscribedController;
+        private float buttonsLockedUntilUnscaledTime;
 
-        private void Reset()
+        public GameSceneHudPresenter(
+            GameSceneHudView view,
+            LevelSessionController levelSessionController)
         {
-            ResolveView();
+            this.view = view;
+            this.levelSessionController = levelSessionController;
         }
 
-        private void Awake()
+        public void Initialize()
         {
-            ResolveView();
-        }
-
-        private void OnEnable()
-        {
-            ResolveView();
             BindButtons();
             BindController();
             RefreshPresentation();
         }
 
-        private void OnDisable()
+        public void Dispose()
         {
             UnbindController();
             UnbindButtons();
-        }
-
-        private void OnDestroy()
-        {
-            UnbindController();
-            UnbindButtons();
-        }
-
-        [Inject]
-        public void Construct(LevelSessionController injectedLevelSessionController)
-        {
-            levelSessionController = injectedLevelSessionController;
-            if (!isActiveAndEnabled)
-            {
-                return;
-            }
-
-            BindController();
-            RefreshPresentation();
         }
 
         private void HandleLevelChanged(int currentLevelIndex)
         {
             RefreshLevelText(currentLevelIndex);
+            buttonsLockedUntilUnscaledTime = 0f;
             view?.ShowPlayingState();
         }
 
         private void HandleLevelWon(int currentLevelIndex)
         {
             RefreshLevelText(currentLevelIndex);
+            LockOutcomeButtonsTemporarily();
             view?.ShowWinState();
         }
 
         private void HandleLevelLost(int currentLevelIndex)
         {
             RefreshLevelText(currentLevelIndex);
+            buttonsLockedUntilUnscaledTime = 0f;
             view?.ShowLoseState();
-        }
-
-        private void ResolveView()
-        {
-            view ??= GetComponent<GameSceneHudView>();
         }
 
         private void BindController()
@@ -108,7 +86,6 @@ namespace PixelFlow.Runtime.UI
 
         private void BindButtons()
         {
-            ResolveView();
             if (view == null)
             {
                 return;
@@ -143,7 +120,7 @@ namespace PixelFlow.Runtime.UI
 
         private void HandleNextLevelClicked()
         {
-            if (levelSessionController == null)
+            if (levelSessionController == null || AreOutcomeButtonsLocked())
             {
                 return;
             }
@@ -153,7 +130,6 @@ namespace PixelFlow.Runtime.UI
 
         private void RefreshPresentation()
         {
-            ResolveView();
             if (view == null)
             {
                 return;
@@ -170,12 +146,15 @@ namespace PixelFlow.Runtime.UI
             switch (levelSessionController.CurrentRunState)
             {
                 case LevelRunState.Won:
+                    LockOutcomeButtonsTemporarily();
                     view.ShowWinState();
                     break;
                 case LevelRunState.Lost:
+                    buttonsLockedUntilUnscaledTime = 0f;
                     view.ShowLoseState();
                     break;
                 default:
+                    buttonsLockedUntilUnscaledTime = 0f;
                     view.ShowPlayingState();
                     break;
             }
@@ -202,6 +181,16 @@ namespace PixelFlow.Runtime.UI
             }
 
             view.SetLevelNumber(currentLevelIndex + 1);
+        }
+
+        private void LockOutcomeButtonsTemporarily()
+        {
+            buttonsLockedUntilUnscaledTime = Time.unscaledTime + OutcomeButtonLockDuration;
+        }
+
+        private bool AreOutcomeButtonsLocked()
+        {
+            return Time.unscaledTime < buttonsLockedUntilUnscaledTime;
         }
     }
 }

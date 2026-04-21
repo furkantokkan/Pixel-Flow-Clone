@@ -21,6 +21,15 @@ namespace PixelFlow.Runtime.Composition
 
         [Header("Game")]
         [SerializeField, Min(0.01f)] private float dispatchFollowSpeed = 7f;
+        [SerializeField, Min(0.01f)] private float traySendDuration = 0.45f;
+        [SerializeField, Min(0.01f)] private float trayReturnDuration = 0.6f;
+        [SerializeField, Min(0.01f)] private float trayTransferArcHeight = 1.5f;
+        [SerializeField, Min(0f)] private float beltShotOriginForwardOffset = 0.8f;
+        [SerializeField, Min(0.01f)] private float beltShotRadius = 0.4f;
+        [SerializeField, Min(0.01f)] private float beltShotDistance = 20f;
+        [SerializeField, Min(1f)] private float burstFollowSpeedMultiplier = 1.85f;
+        [SerializeField, Min(0.01f)] private float burstRampDuration = 0.35f;
+        [SerializeField, Min(0.01f)] private float burstFireIntervalMultiplier = 0.7f;
 
         [Header("Input")]
         [SerializeField] private LayerMask pigLayerMask = 1 << 7;
@@ -36,6 +45,15 @@ namespace PixelFlow.Runtime.Composition
         public int BlockMaxSize => blockMaxSize;
         public int BulletMaxSize => bulletMaxSize;
         public float DispatchFollowSpeed => dispatchFollowSpeed;
+        public float TraySendDuration => traySendDuration;
+        public float TrayReturnDuration => trayReturnDuration;
+        public float TrayTransferArcHeight => trayTransferArcHeight;
+        public float BeltShotOriginForwardOffset => beltShotOriginForwardOffset;
+        public float BeltShotRadius => beltShotRadius;
+        public float BeltShotDistance => beltShotDistance;
+        public float BurstFollowSpeedMultiplier => burstFollowSpeedMultiplier;
+        public float BurstRampDuration => burstRampDuration;
+        public float BurstFireIntervalMultiplier => burstFireIntervalMultiplier;
         public LayerMask PigLayerMask => pigLayerMask;
         public float MaxRayDistance => maxRayDistance;
 
@@ -48,6 +66,15 @@ namespace PixelFlow.Runtime.Composition
             blockMaxSize = Mathf.Max(1, blockMaxSize);
             bulletMaxSize = Mathf.Max(1, bulletMaxSize);
             dispatchFollowSpeed = Mathf.Max(0.01f, dispatchFollowSpeed);
+            traySendDuration = Mathf.Max(0.01f, traySendDuration);
+            trayReturnDuration = Mathf.Max(0.01f, trayReturnDuration);
+            trayTransferArcHeight = Mathf.Max(0.01f, trayTransferArcHeight);
+            beltShotOriginForwardOffset = Mathf.Max(0f, beltShotOriginForwardOffset);
+            beltShotRadius = Mathf.Max(0.01f, beltShotRadius);
+            beltShotDistance = Mathf.Max(0.01f, beltShotDistance);
+            burstFollowSpeedMultiplier = Mathf.Max(1f, burstFollowSpeedMultiplier);
+            burstRampDuration = Mathf.Max(0.01f, burstRampDuration);
+            burstFireIntervalMultiplier = Mathf.Max(0.01f, burstFireIntervalMultiplier);
             maxRayDistance = Mathf.Max(1f, maxRayDistance);
 
             if (pigLayerMask.value == 0)

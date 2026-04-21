@@ -72,36 +72,8 @@ namespace PixelFlow.Runtime.Data
                 return result;
             }
 
-            var blockCounts = CountBlocksByColor(displayGrid);
-            var buckets = BuildBuckets(blockCounts, settings);
-
-            if (buckets.Count == 0)
-            {
-                return result;
-            }
-
-            var slotCursor = 0;
-            var hasRemaining = true;
-
-            while (hasRemaining)
-            {
-                hasRemaining = false;
-
-                for (int i = 0; i < buckets.Count; i++)
-                {
-                    var bucket = buckets[i];
-                    if (bucket.AmmoQueue.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    hasRemaining = true;
-                    var ammo = bucket.AmmoQueue.Dequeue();
-                    result.Add(new PigQueueEntry(bucket.Color, ammo, slotCursor % settings.HoldingSlotCount));
-                    slotCursor++;
-                }
-            }
-
+            var layers = ResolveExposureLayers(displayGrid);
+            AppendLayerBuckets(layers, settings, result);
             return result;
         }
 
@@ -116,43 +88,64 @@ namespace PixelFlow.Runtime.Data
                 return result;
             }
 
-            var blockCounts = CountBlocksByColor(placedObjects, database);
-            var buckets = BuildBuckets(blockCounts, settings);
-            if (buckets.Count == 0)
-            {
-                return result;
-            }
-
-            var slotCursor = 0;
-            var hasRemaining = true;
-            while (hasRemaining)
-            {
-                hasRemaining = false;
-
-                for (int i = 0; i < buckets.Count; i++)
-                {
-                    var bucket = buckets[i];
-                    if (bucket.AmmoQueue.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    hasRemaining = true;
-                    var ammo = bucket.AmmoQueue.Dequeue();
-                    result.Add(new PigQueueEntry(bucket.Color, ammo, slotCursor % settings.HoldingSlotCount));
-                    slotCursor++;
-                }
-            }
-
+            var layers = ResolveExposureLayers(placedObjects, database);
+            AppendLayerBuckets(layers, settings, result);
             return result;
         }
 
-        private static Dictionary<PigColor, int> CountBlocksByColor(PigColor[,] displayGrid)
+        private static void AppendLayerBuckets(
+            IReadOnlyList<Dictionary<PigColor, int>> layers,
+            PigQueueGenerationSettings settings,
+            List<PigQueueEntry> result)
         {
-            var counts = new Dictionary<PigColor, int>();
+            if (layers == null || settings == null || result == null)
+            {
+                return;
+            }
+
+            var slotCursor = 0;
+            var holdingSlotCount = Mathf.Max(1, settings.HoldingSlotCount);
+            for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
+            {
+                var buckets = BuildBuckets(layers[layerIndex], settings);
+                if (buckets.Count == 0)
+                {
+                    continue;
+                }
+
+                var hasRemaining = true;
+                while (hasRemaining)
+                {
+                    hasRemaining = false;
+                    for (int bucketIndex = 0; bucketIndex < buckets.Count; bucketIndex++)
+                    {
+                        var bucket = buckets[bucketIndex];
+                        if (bucket.AmmoQueue.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        hasRemaining = true;
+                        var ammo = bucket.AmmoQueue.Dequeue();
+                        result.Add(new PigQueueEntry(bucket.Color, ammo, slotCursor % holdingSlotCount));
+                        slotCursor++;
+                    }
+                }
+            }
+        }
+
+        private static List<Dictionary<PigColor, int>> ResolveExposureLayers(PigColor[,] displayGrid)
+        {
+            var layers = new List<Dictionary<PigColor, int>>();
             var width = displayGrid.GetLength(0);
             var height = displayGrid.GetLength(1);
+            if (width <= 0 || height <= 0)
+            {
+                return layers;
+            }
 
+            var occupied = new bool[width, height];
+            var targetColors = new PigColor[width, height];
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
@@ -163,47 +156,339 @@ namespace PixelFlow.Runtime.Data
                         continue;
                     }
 
-                    if (!counts.TryGetValue(color, out var current))
+                    occupied[x, y] = true;
+                    targetColors[x, y] = color;
+                }
+            }
+
+            return ResolveExposureLayers(occupied, targetColors);
+        }
+
+        private static List<Dictionary<PigColor, int>> ResolveExposureLayers(
+            IReadOnlyList<PlacedObjectData> placedObjects,
+            LevelDatabase database)
+        {
+            var layers = new List<Dictionary<PigColor, int>>();
+            if (!TryBuildPlacedObjectGrid(placedObjects, database, out var occupied, out var targetColors))
+            {
+                return layers;
+            }
+
+            return ResolveExposureLayers(occupied, targetColors);
+        }
+
+        private static List<Dictionary<PigColor, int>> ResolveExposureLayers(bool[,] occupied, PigColor[,] targetColors)
+        {
+            var layers = new List<Dictionary<PigColor, int>>();
+            if (occupied == null || targetColors == null)
+            {
+                return layers;
+            }
+
+            var width = occupied.GetLength(0);
+            var height = occupied.GetLength(1);
+            if (width <= 0 || height <= 0)
+            {
+                return layers;
+            }
+
+            while (HasRemainingTargets(targetColors))
+            {
+                var exposedTargets = new bool[width, height];
+                MarkExposedTargets(occupied, targetColors, exposedTargets, width, height);
+
+                var layerCounts = CollectAndRemoveExposedTargets(occupied, targetColors, exposedTargets, width, height);
+                if (layerCounts.Count == 0)
+                {
+                    var fallbackCounts = CountRemainingTargets(targetColors, width, height);
+                    if (fallbackCounts.Count > 0)
                     {
-                        counts[color] = 1;
+                        layers.Add(fallbackCounts);
+                    }
+
+                    break;
+                }
+
+                layers.Add(layerCounts);
+            }
+
+            return layers;
+        }
+
+        private static void MarkExposedTargets(
+            bool[,] occupied,
+            PigColor[,] targetColors,
+            bool[,] exposedTargets,
+            int width,
+            int height)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                MarkFirstOccupiedInRow(occupied, targetColors, exposedTargets, y, width, leftToRight: true);
+                MarkFirstOccupiedInRow(occupied, targetColors, exposedTargets, y, width, leftToRight: false);
+            }
+
+            for (int x = 0; x < width; x++)
+            {
+                MarkFirstOccupiedInColumn(occupied, targetColors, exposedTargets, x, height, bottomToTop: true);
+                MarkFirstOccupiedInColumn(occupied, targetColors, exposedTargets, x, height, bottomToTop: false);
+            }
+        }
+
+        private static void MarkFirstOccupiedInRow(
+            bool[,] occupied,
+            PigColor[,] targetColors,
+            bool[,] exposedTargets,
+            int rowIndex,
+            int width,
+            bool leftToRight)
+        {
+            if (leftToRight)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!occupied[x, rowIndex])
+                    {
                         continue;
                     }
 
-                    counts[color] = current + 1;
+                    if (targetColors[x, rowIndex] != PigColor.None)
+                    {
+                        exposedTargets[x, rowIndex] = true;
+                    }
+
+                    break;
+                }
+
+                return;
+            }
+
+            for (int x = width - 1; x >= 0; x--)
+            {
+                if (!occupied[x, rowIndex])
+                {
+                    continue;
+                }
+
+                if (targetColors[x, rowIndex] != PigColor.None)
+                {
+                    exposedTargets[x, rowIndex] = true;
+                }
+
+                break;
+            }
+        }
+
+        private static void MarkFirstOccupiedInColumn(
+            bool[,] occupied,
+            PigColor[,] targetColors,
+            bool[,] exposedTargets,
+            int columnIndex,
+            int height,
+            bool bottomToTop)
+        {
+            if (bottomToTop)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (!occupied[columnIndex, y])
+                    {
+                        continue;
+                    }
+
+                    if (targetColors[columnIndex, y] != PigColor.None)
+                    {
+                        exposedTargets[columnIndex, y] = true;
+                    }
+
+                    break;
+                }
+
+                return;
+            }
+
+            for (int y = height - 1; y >= 0; y--)
+            {
+                if (!occupied[columnIndex, y])
+                {
+                    continue;
+                }
+
+                if (targetColors[columnIndex, y] != PigColor.None)
+                {
+                    exposedTargets[columnIndex, y] = true;
+                }
+
+                break;
+            }
+        }
+
+        private static Dictionary<PigColor, int> CollectAndRemoveExposedTargets(
+            bool[,] occupied,
+            PigColor[,] targetColors,
+            bool[,] exposedTargets,
+            int width,
+            int height)
+        {
+            var counts = new Dictionary<PigColor, int>();
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (!exposedTargets[x, y])
+                    {
+                        continue;
+                    }
+
+                    var color = targetColors[x, y];
+                    if (color == PigColor.None)
+                    {
+                        continue;
+                    }
+
+                    IncrementCount(counts, color);
+                    targetColors[x, y] = PigColor.None;
+                    occupied[x, y] = false;
                 }
             }
 
             return counts;
         }
 
-        private static Dictionary<PigColor, int> CountBlocksByColor(
-            IReadOnlyList<PlacedObjectData> placedObjects,
-            LevelDatabase database)
+        private static Dictionary<PigColor, int> CountRemainingTargets(
+            PigColor[,] targetColors,
+            int width,
+            int height)
         {
             var counts = new Dictionary<PigColor, int>();
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    var color = targetColors[x, y];
+                    if (color == PigColor.None)
+                    {
+                        continue;
+                    }
+
+                    IncrementCount(counts, color);
+                }
+            }
+
+            return counts;
+        }
+
+        private static bool HasRemainingTargets(PigColor[,] targetColors)
+        {
+            var width = targetColors.GetLength(0);
+            var height = targetColors.GetLength(1);
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (targetColors[x, y] != PigColor.None)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryBuildPlacedObjectGrid(
+            IReadOnlyList<PlacedObjectData> placedObjects,
+            LevelDatabase database,
+            out bool[,] occupied,
+            out PigColor[,] targetColors)
+        {
+            occupied = null;
+            targetColors = null;
+            if (placedObjects == null || database == null || placedObjects.Count == 0)
+            {
+                return false;
+            }
+
+            var hasBounds = false;
+            var minX = int.MaxValue;
+            var minY = int.MaxValue;
+            var maxX = int.MinValue;
+            var maxY = int.MinValue;
 
             for (int i = 0; i < placedObjects.Count; i++)
             {
                 var placedObject = placedObjects[i];
                 var definition = database.FindPlaceable(placedObject);
-                if (definition == null
-                    || definition.Kind != PlaceableKind.Block
-                    || definition.Color == PigColor.None)
+                if (definition == null)
                 {
                     continue;
                 }
 
-                var occupiedCellCount = Mathf.Max(1, definition.GridSize.x * definition.GridSize.y);
-                if (!counts.TryGetValue(definition.Color, out var current))
-                {
-                    counts[definition.Color] = occupiedCellCount;
-                    continue;
-                }
-
-                counts[definition.Color] = current + occupiedCellCount;
+                var size = definition.GridSize;
+                minX = Mathf.Min(minX, placedObject.Origin.x);
+                minY = Mathf.Min(minY, placedObject.Origin.y);
+                maxX = Mathf.Max(maxX, placedObject.Origin.x + Mathf.Max(1, size.x) - 1);
+                maxY = Mathf.Max(maxY, placedObject.Origin.y + Mathf.Max(1, size.y) - 1);
+                hasBounds = true;
             }
 
-            return counts;
+            if (!hasBounds)
+            {
+                return false;
+            }
+
+            var width = Mathf.Max(1, maxX - minX + 1);
+            var height = Mathf.Max(1, maxY - minY + 1);
+            occupied = new bool[width, height];
+            targetColors = new PigColor[width, height];
+
+            for (int i = 0; i < placedObjects.Count; i++)
+            {
+                var placedObject = placedObjects[i];
+                var definition = database.FindPlaceable(placedObject);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var size = definition.GridSize;
+                for (int offsetX = 0; offsetX < size.x; offsetX++)
+                {
+                    for (int offsetY = 0; offsetY < size.y; offsetY++)
+                    {
+                        var gridX = (placedObject.Origin.x + offsetX) - minX;
+                        var gridY = (placedObject.Origin.y + offsetY) - minY;
+                        if (gridX < 0 || gridX >= width || gridY < 0 || gridY >= height)
+                        {
+                            continue;
+                        }
+
+                        occupied[gridX, gridY] = true;
+                        targetColors[gridX, gridY] = definition.Kind == PlaceableKind.Block
+                            ? definition.Color
+                            : PigColor.None;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static void IncrementCount(Dictionary<PigColor, int> counts, PigColor color)
+        {
+            if (color == PigColor.None || counts == null)
+            {
+                return;
+            }
+
+            if (!counts.TryGetValue(color, out var current))
+            {
+                counts[color] = 1;
+                return;
+            }
+
+            counts[color] = current + 1;
         }
 
         private static List<ColorQueueBucket> BuildBuckets(Dictionary<PigColor, int> blockCounts, PigQueueGenerationSettings settings)

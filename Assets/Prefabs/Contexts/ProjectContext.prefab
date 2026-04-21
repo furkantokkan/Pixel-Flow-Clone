@@ -52,3 +52,4 @@ MonoBehaviour:
   defaultTheme: {fileID: 11400000, guid: 6bdb90689a7e4fa0b4ae3a7d8d269b83, type: 2}
   defaultBlockData: {fileID: 11400000, guid: 1ccf1d3745b049f2bc67fc6204065799, type: 2}
   runtimeSettings: {fileID: 11400000, guid: ad0581b3c6944b95a8d85ac21a8b8914, type: 2}
+  levelDatabase: {fileID: 11400000, guid: 54e908b212f437b4db5116d1c9f0482c, type: 2}

@@ -13,7 +13,6 @@ namespace PixelFlow.Runtime.Data
         [SerializeField] private BlockData blockData;
         [SerializeField] private ImageImportSettings importSettings = new();
         [SerializeField] private List<PixelCellData> pixelCells = new();
-        [SerializeField] private List<WaitingSlotData> waitingSlots = new();
         [SerializeField, HideInInspector] private List<PigQueueEntry> pigQueue = new();
         [SerializeField, HideInInspector] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
 
@@ -23,7 +22,6 @@ namespace PixelFlow.Runtime.Data
         public BlockData BlockData => blockData;
         public ImageImportSettings ImportSettings => importSettings;
         public IReadOnlyList<PixelCellData> PixelCells => pixelCells;
-        public IReadOnlyList<WaitingSlotData> WaitingSlots => waitingSlots;
         public IReadOnlyList<PigQueueEntry> PigQueue => pigQueue;
         public PigQueueGenerationSettings PigQueueGenerationSettings => pigQueueGenerationSettings;
 

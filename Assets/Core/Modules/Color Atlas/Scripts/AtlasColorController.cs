@@ -267,6 +267,11 @@ namespace Core.Runtime.ColorAtlas
                 return;
             }
 
+            if (!ShouldControlRenderer(rendererCandidate))
+            {
+                return;
+            }
+
             for (int i = 0; i < rendererCount; i++)
             {
                 if (controlledRenderers[i] == rendererCandidate)
@@ -277,6 +282,23 @@ namespace Core.Runtime.ColorAtlas
 
             controlledRenderers[rendererCount] = rendererCandidate;
             rendererCount++;
+        }
+
+        protected virtual bool ShouldControlRenderer(Renderer rendererCandidate)
+        {
+            return rendererCandidate != null;
+        }
+
+        protected void RefreshControlledRenderers()
+        {
+#if UNITY_EDITOR
+            RestoreEditorMaterialSettings();
+#endif
+            controlledRenderers = null;
+            controlledRendererCount = 0;
+            isDirty = true;
+            CacheRenderers(true);
+            ApplyColorSettings();
         }
 
         private static bool IsValidTargetRenderer(Renderer rendererCandidate)
@@ -573,6 +595,11 @@ namespace Core.Runtime.ColorAtlas
             {
                 Renderer rendererCandidate = discoveredRenderers[i];
                 if (!IsValidTargetRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                if (!ShouldControlRenderer(rendererCandidate))
                 {
                     continue;
                 }

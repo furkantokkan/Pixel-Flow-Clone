@@ -1,5 +1,54 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2764723818767576501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2588441333146827350}
+  - component: {fileID: 8971392481174117773}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2588441333146827350
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2764723818767576501}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.8576514, y: -1.6235805, z: -31.42085}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2571347999322623634}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8971392481174117773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2764723818767576501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
 --- !u!1 &5673821130648578367
 GameObject:
   m_ObjectHideFlags: 0
@@ -32,7 +81,8 @@ Transform:
   m_LocalPosition: {x: -1.8576514, y: 1.6235805, z: 31.42085}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 2588441333146827350}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7000000000000000002
@@ -54,11 +104,8 @@ MonoBehaviour:
   gameManager: {fileID: 7000000000000000004}
   inputManager: {fileID: 7000000000000000005}
   levelSessionController: {fileID: 1350188158383433044}
-  themeDatabase: {fileID: 11400000, guid: 390f797a66284f1fb55ebea14d12a274, type: 2}
-  defaultTheme: {fileID: 11400000, guid: 6bdb90689a7e4fa0b4ae3a7d8d269b83, type: 2}
-  defaultBlockData: {fileID: 11400000, guid: 1ccf1d3745b049f2bc67fc6204065799, type: 2}
-  runtimeSettings: {fileID: 11400000, guid: ad0581b3c6944b95a8d85ac21a8b8914, type: 2}
-  levelDatabase: {fileID: 11400000, guid: 54e908b212f437b4db5116d1c9f0482c, type: 2}
+  globalVolume: {fileID: 8971392481174117773}
+  optimizeGlobalVolumeForMobile: 1
 --- !u!114 &7000000000000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -71,8 +118,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e1447e2bcff48aaa6d93d0f5bf46365, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  traySlotPrefab: {fileID: 6222222222222222224, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
-  dispatchFollowSpeed: 7
+  pigShotLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  cullOffscreenPigRenderers: 1
+  pigRendererViewportPadding: 0.18
+  targetFrameRate: 60
 --- !u!114 &7000000000000000005
 MonoBehaviour:
   m_ObjectHideFlags: 0

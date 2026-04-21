@@ -14,11 +14,13 @@ namespace PixelFlow.Runtime.Composition
         [SerializeField] private Theme defaultTheme;
         [SerializeField] private BlockData defaultBlockData;
         [SerializeField] private ProjectRuntimeSettings runtimeSettings;
+        [SerializeField] private LevelDatabase levelDatabase;
 
         public ThemeDatabase ThemeDatabase => themeDatabase;
         public Theme DefaultTheme => defaultTheme;
         public BlockData DefaultBlockData => defaultBlockData;
         public ProjectRuntimeSettings RuntimeSettings => runtimeSettings;
+        public LevelDatabase LevelDatabase => levelDatabase;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -120,6 +122,11 @@ namespace PixelFlow.Runtime.Composition
             {
                 builder.RegisterInstance(runtimeSettings);
             }
+
+            if (levelDatabase != null)
+            {
+                builder.RegisterInstance(levelDatabase);
+            }
         }
 
         private void PrepareRegistrations()
@@ -157,6 +164,11 @@ namespace PixelFlow.Runtime.Composition
             if (runtimeSettings == null)
             {
                 runtimeSettings = FindFirstAsset<ProjectRuntimeSettings>();
+            }
+
+            if (levelDatabase == null)
+            {
+                levelDatabase = FindFirstAsset<LevelDatabase>();
             }
 
             runtimeSettings?.TryAutoAssignAssets();

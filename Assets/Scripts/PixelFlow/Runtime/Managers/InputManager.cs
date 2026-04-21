@@ -47,7 +47,6 @@ namespace PixelFlow.Runtime.Managers
         private void Update()
         {
             var activeCamera = ResolveActiveCamera();
-            levelSessionController ??= GetComponent<LevelSessionController>();
             if (gameManager == null
                 || activeCamera == null
                 || levelSessionController == null
@@ -66,12 +65,7 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
-            if (!TryResolveClickedPig(activeCamera, screenPosition, out var pig))
-            {
-                return;
-            }
-
-            if (!pig.HasAmmo)
+            if (!TryResolveClickedDispatchablePig(activeCamera, screenPosition, out var pig))
             {
                 return;
             }
@@ -82,10 +76,19 @@ namespace PixelFlow.Runtime.Managers
         [Inject]
         public void InjectProjectSettings(ProjectRuntimeSettings settings)
         {
-            ApplyProjectSettings(settings);
+            ConfigureFromProjectSettings(settings);
         }
 
-        public void ApplyProjectSettings(ProjectRuntimeSettings settings)
+        [Inject]
+        public void InjectSceneDependencies(
+            GameManager injectedGameManager,
+            LevelSessionController injectedLevelSessionController)
+        {
+            gameManager = injectedGameManager;
+            levelSessionController = injectedLevelSessionController;
+        }
+
+        private void ConfigureFromProjectSettings(ProjectRuntimeSettings settings)
         {
             if (settings == null)
             {
@@ -101,9 +104,8 @@ namespace PixelFlow.Runtime.Managers
             EnsurePigLayerMask();
         }
 
-        public void Construct(GameManager manager, Camera resolvedCamera)
+        public void SetInputCamera(Camera resolvedCamera)
         {
-            gameManager = manager;
             if (resolvedCamera != null)
             {
                 inputCamera = resolvedCamera;
@@ -165,10 +167,10 @@ namespace PixelFlow.Runtime.Managers
                 : 1 << 7;
         }
 
-        private bool TryResolveClickedPig(Camera activeCamera, Vector2 screenPosition, out PigController pig)
+        private bool TryResolveClickedDispatchablePig(Camera activeCamera, Vector2 screenPosition, out PigController pig)
         {
             pig = null;
-            if (activeCamera == null)
+            if (activeCamera == null || gameManager == null)
             {
                 return false;
             }
@@ -191,7 +193,12 @@ namespace PixelFlow.Runtime.Managers
                     continue;
                 }
 
-                pig = hitPig;
+                if (!gameManager.TryResolveDispatchCandidate(hitPig, out var dispatchPig))
+                {
+                    continue;
+                }
+
+                pig = dispatchPig;
                 return true;
             }
 

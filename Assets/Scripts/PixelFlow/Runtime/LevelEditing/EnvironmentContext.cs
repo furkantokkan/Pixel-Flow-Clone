@@ -1,16 +1,21 @@
 using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Visuals;
 using System.Collections.Generic;
 using UnityEngine;
 using Dreamteck.Splines;
 using TMPro;
 using VContainer;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace PixelFlow.Runtime.LevelEditing
 {
     [DisallowMultipleComponent]
     public sealed class EnvironmentContext : EnvironmentLifetimeScope
     {
+        private const string AtlasSharedMaterialGuid = "10582670d432d8d43a86556ee38b7e14";
         private static readonly Vector3 TrayCounterLocalPosition = new(0f, -0.42f, 0f);
         private static readonly Quaternion TrayCounterLocalRotation = Quaternion.Euler(90f, 0f, 0f);
         private static readonly Vector3 TrayCounterLocalScale = Vector3.one * 0.1f;
@@ -18,6 +23,7 @@ namespace PixelFlow.Runtime.LevelEditing
         [SerializeField] private Transform blockContainer;
         [SerializeField] private Transform holdingContainer;
         [SerializeField] private Transform deckContainer;
+        [SerializeField] private Material atlasSharedMaterial;
         
         [SerializeField] private Transform trayRootPos;
         [SerializeField] private Transform trayEquipPos;
@@ -28,10 +34,12 @@ namespace PixelFlow.Runtime.LevelEditing
         private ThemeDatabase themeDatabase;
         private Theme defaultTheme;
         private BlockData defaultBlockData;
+        private ProjectRuntimeSettings runtimeSettings;
 
         public Transform BlockContainer => blockContainer;
         public Transform HoldingContainer => holdingContainer;
         public Transform DeckContainer => deckContainer;
+        public Material AtlasSharedMaterial => atlasSharedMaterial;
         public Transform TrayRoot => trayRootPos;
         public Transform TrayEquipPos => trayEquipPos;
         public Transform TrayDropPos => trayDropPos;
@@ -131,17 +139,41 @@ namespace PixelFlow.Runtime.LevelEditing
             {
                 trayCounterText = ResolveTrayCounterText();
             }
+
+            runtimeSettings ??= ResolveRuntimeSettings();
+            atlasSharedMaterial ??= ResolveAtlasSharedMaterial();
+            SynchronizeAtlasMaterials();
         }
 
         [Inject]
-        public void Construct(
+        public void InjectProjectDependencies(
             ThemeDatabase injectedThemeDatabase,
             Theme injectedDefaultTheme,
-            BlockData injectedDefaultBlockData)
+            BlockData injectedDefaultBlockData,
+            ProjectRuntimeSettings injectedRuntimeSettings)
         {
             themeDatabase ??= injectedThemeDatabase;
             defaultTheme ??= injectedDefaultTheme;
             defaultBlockData ??= injectedDefaultBlockData;
+            runtimeSettings ??= injectedRuntimeSettings;
+            atlasSharedMaterial ??= ResolveAtlasSharedMaterial();
+            SynchronizeAtlasMaterials();
+        }
+
+        public void ApplyEditorContext(
+            ThemeDatabase resolvedThemeDatabase,
+            Theme resolvedTheme,
+            BlockData resolvedDefaultBlockData)
+        {
+            themeDatabase ??= resolvedThemeDatabase;
+            if (resolvedTheme != null)
+            {
+                defaultTheme = resolvedTheme;
+            }
+
+            defaultBlockData ??= resolvedDefaultBlockData;
+            atlasSharedMaterial ??= ResolveAtlasSharedMaterial();
+            SynchronizeAtlasMaterials();
         }
 
         public Theme ResolveTheme(Theme overrideTheme = null)
@@ -177,6 +209,29 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
             return trayCounterText;
+        }
+
+        [ContextMenu("Synchronize Atlas Materials")]
+        public void SynchronizeAtlasMaterials()
+        {
+            if (atlasSharedMaterial == null)
+            {
+                return;
+            }
+
+            runtimeSettings ??= ResolveRuntimeSettings();
+
+            ApplyAtlasMaterialToRoot(runtimeSettings != null && runtimeSettings.BlockPrefab != null
+                ? runtimeSettings.BlockPrefab.gameObject
+                : null);
+            ApplyAtlasMaterialToRoot(runtimeSettings != null && runtimeSettings.PigPrefab != null
+                ? runtimeSettings.PigPrefab.gameObject
+                : null);
+            ApplyAtlasMaterialToRoot(runtimeSettings != null && runtimeSettings.BulletPrefab != null
+                ? runtimeSettings.BulletPrefab.gameObject
+                : null);
+            ApplyAtlasMaterialToRoot(defaultBlockData != null ? defaultBlockData.BlockPrefab : null);
+            ApplyAtlasMaterialToRoot(gameObject);
         }
 
         public int ApplyHoldingContainerCount(int desiredCount, int minCount = 0, int maxCount = int.MaxValue)
@@ -330,6 +385,194 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
             return text;
+        }
+
+        private ProjectRuntimeSettings ResolveRuntimeSettings()
+        {
+            if (runtimeSettings != null)
+            {
+                return runtimeSettings;
+            }
+
+#if UNITY_EDITOR
+            var runtimeSettingGuids = AssetDatabase.FindAssets($"t:{nameof(ProjectRuntimeSettings)}");
+            if (runtimeSettingGuids == null || runtimeSettingGuids.Length == 0)
+            {
+                return null;
+            }
+
+            var runtimeSettingsPath = AssetDatabase.GUIDToAssetPath(runtimeSettingGuids[0]);
+            runtimeSettings = AssetDatabase.LoadAssetAtPath<ProjectRuntimeSettings>(runtimeSettingsPath);
+#endif
+            return runtimeSettings;
+        }
+
+        private Material ResolveAtlasSharedMaterial()
+        {
+            if (atlasSharedMaterial != null)
+            {
+                return atlasSharedMaterial;
+            }
+
+            runtimeSettings ??= ResolveRuntimeSettings();
+
+            var resolvedMaterial = ResolveAtlasMaterialFromRoot(runtimeSettings != null && runtimeSettings.BlockPrefab != null
+                ? runtimeSettings.BlockPrefab.gameObject
+                : null);
+            if (resolvedMaterial != null)
+            {
+                return resolvedMaterial;
+            }
+
+            resolvedMaterial = ResolveAtlasMaterialFromRoot(runtimeSettings != null && runtimeSettings.PigPrefab != null
+                ? runtimeSettings.PigPrefab.gameObject
+                : null);
+            if (resolvedMaterial != null)
+            {
+                return resolvedMaterial;
+            }
+
+            resolvedMaterial = ResolveAtlasMaterialFromRoot(runtimeSettings != null && runtimeSettings.BulletPrefab != null
+                ? runtimeSettings.BulletPrefab.gameObject
+                : null);
+            if (resolvedMaterial != null)
+            {
+                return resolvedMaterial;
+            }
+
+            resolvedMaterial = ResolveAtlasMaterialFromRoot(defaultBlockData != null ? defaultBlockData.BlockPrefab : null);
+            if (resolvedMaterial != null)
+            {
+                return resolvedMaterial;
+            }
+
+#if UNITY_EDITOR
+            var atlasMaterialPath = AssetDatabase.GUIDToAssetPath(AtlasSharedMaterialGuid);
+            return string.IsNullOrWhiteSpace(atlasMaterialPath)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<Material>(atlasMaterialPath);
+#else
+            return null;
+#endif
+        }
+
+        private void ApplyAtlasMaterialToRoot(GameObject root)
+        {
+            if (root == null || atlasSharedMaterial == null)
+            {
+                return;
+            }
+
+            var atlasTargets = root.GetComponentsInChildren<AtlasColorTarget>(true);
+            for (int i = 0; i < atlasTargets.Length; i++)
+            {
+                ApplyAtlasMaterialToTarget(atlasTargets[i]);
+            }
+        }
+
+        private void ApplyAtlasMaterialToTarget(AtlasColorTarget atlasTarget)
+        {
+            if (atlasTarget == null)
+            {
+                return;
+            }
+
+            var renderers = atlasTarget.GetComponentsInChildren<Renderer>(true);
+            var appliedChanges = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var rendererCandidate = renderers[i];
+                if (!ShouldUseAtlasSharedMaterial(rendererCandidate))
+                {
+                    continue;
+                }
+
+                var sharedMaterials = rendererCandidate.sharedMaterials;
+                if (sharedMaterials == null || sharedMaterials.Length == 0)
+                {
+                    continue;
+                }
+
+                var rendererChanged = false;
+                for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
+                {
+                    if (sharedMaterials[materialIndex] == atlasSharedMaterial)
+                    {
+                        continue;
+                    }
+
+                    sharedMaterials[materialIndex] = atlasSharedMaterial;
+                    rendererChanged = true;
+                }
+
+                if (!rendererChanged)
+                {
+                    continue;
+                }
+
+                rendererCandidate.sharedMaterials = sharedMaterials;
+                appliedChanges = true;
+
+#if UNITY_EDITOR
+                EditorUtility.SetDirty(rendererCandidate);
+#endif
+            }
+
+            if (!appliedChanges)
+            {
+                return;
+            }
+
+            atlasTarget.SetColor(atlasTarget.CurrentColor, atlasTarget.CurrentToneIndex);
+
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(atlasTarget);
+#endif
+        }
+
+        private static Material ResolveAtlasMaterialFromRoot(GameObject root)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            var renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var rendererCandidate = renderers[i];
+                if (!ShouldUseAtlasSharedMaterial(rendererCandidate))
+                {
+                    continue;
+                }
+
+                var sharedMaterials = rendererCandidate.sharedMaterials;
+                for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
+                {
+                    var material = sharedMaterials[materialIndex];
+                    if (MaterialSupportsAtlas(material))
+                    {
+                        return material;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static bool ShouldUseAtlasSharedMaterial(Renderer rendererCandidate)
+        {
+            return rendererCandidate != null
+                && rendererCandidate.GetComponent<TMP_Text>() == null
+                && rendererCandidate is not TrailRenderer
+                && rendererCandidate is not ParticleSystemRenderer;
+        }
+
+        private static bool MaterialSupportsAtlas(Material material)
+        {
+            return material != null
+                && material.HasProperty("_ColorIndex")
+                && material.HasProperty("_ToneIndex");
         }
     }
 }

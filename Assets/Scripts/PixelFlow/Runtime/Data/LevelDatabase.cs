@@ -201,7 +201,7 @@ namespace PixelFlow.Runtime.Data
                 color = color,
                 pigAbility = PigAbilityType.None,
                 gridSize = Vector2Int.one,
-                editorColor = PigColorPaletteUtility.GetDisplayColor(color),
+                editorColor = PigColorPaletteUtility.GetAtlasPreviewColor(color),
                 prefab = prefab,
             };
         }
@@ -232,7 +232,6 @@ namespace PixelFlow.Runtime.Data
         [SerializeField] private BlockData blockData;
         [SerializeField] private ImageImportSettings importSettings = new();
         [SerializeField, InspectorName("Blocks")] private List<PlacedObjectData> placedObjects = new();
-        [SerializeField, InspectorName("Pig Waiting Slots")] private List<WaitingSlotData> waitingSlots = new();
         [SerializeField, HideInInspector] private List<PigQueueEntry> pigQueue = new();
         [SerializeField, HideInInspector] private PigQueueGenerationSettings pigQueueGenerationSettings = new();
 
@@ -267,7 +266,6 @@ namespace PixelFlow.Runtime.Data
         }
 
         public List<PlacedObjectData> PlacedObjects => placedObjects ??= new List<PlacedObjectData>();
-        public List<WaitingSlotData> WaitingSlots => waitingSlots ??= new List<WaitingSlotData>();
         public List<PigQueueEntry> PigQueue => pigQueue ??= new List<PigQueueEntry>();
 
         public PigQueueGenerationSettings PigQueueGenerationSettings
@@ -287,18 +285,12 @@ namespace PixelFlow.Runtime.Data
                 importSettings = ImportSettings.Clone(),
                 pigQueueGenerationSettings = PigQueueGenerationSettings.Clone(),
                 placedObjects = new List<PlacedObjectData>(PlacedObjects.Count),
-                waitingSlots = new List<WaitingSlotData>(WaitingSlots.Count),
                 pigQueue = new List<PigQueueEntry>(PigQueue.Count),
             };
 
             for (int i = 0; i < PlacedObjects.Count; i++)
             {
                 clone.placedObjects.Add(PlacedObjects[i]);
-            }
-
-            for (int i = 0; i < WaitingSlots.Count; i++)
-            {
-                clone.waitingSlots.Add(WaitingSlots[i]);
             }
 
             for (int i = 0; i < PigQueue.Count; i++)
@@ -324,17 +316,11 @@ namespace PixelFlow.Runtime.Data
             pigQueueGenerationSettings = other.PigQueueGenerationSettings.Clone();
 
             PlacedObjects.Clear();
-            WaitingSlots.Clear();
             PigQueue.Clear();
 
             for (int i = 0; i < other.PlacedObjects.Count; i++)
             {
                 PlacedObjects.Add(other.PlacedObjects[i]);
-            }
-
-            for (int i = 0; i < other.WaitingSlots.Count; i++)
-            {
-                WaitingSlots.Add(other.WaitingSlots[i]);
             }
 
             for (int i = 0; i < other.PigQueue.Count; i++)
@@ -349,7 +335,6 @@ namespace PixelFlow.Runtime.Data
             importSettings ??= new ImageImportSettings();
             pigQueueGenerationSettings ??= new PigQueueGenerationSettings();
             placedObjects ??= new List<PlacedObjectData>();
-            waitingSlots ??= new List<WaitingSlotData>();
             pigQueue ??= new List<PigQueueEntry>();
 
             LevelName = levelName;

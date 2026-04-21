@@ -131,7 +131,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 8642e9fb7f0c7b34db102415e2b7135f, type: 2}
+  - {fileID: 2100000, guid: 10582670d432d8d43a86556ee38b7e14, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -307,7 +307,11 @@ MonoBehaviour:
   renderers:
   - {fileID: 1160974993297779865}
   - {fileID: 3228094296712087355}
-  currentColorInfo: Pink_Pastel Outline:False Renderers:2
-  controlledRendererCount: 0
+  currentColorInfo: Color:2 Tone:13 Outline:True Renderers:1
+  controlledRendererCount: 1
+  colorIndexOverride: 2
+  toneIndexOverride: 13
   enableOutline: 1
   currentColor: 1
+  currentToneIndex: 13
+  excludedRoot: {fileID: 0}

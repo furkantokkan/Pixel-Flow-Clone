@@ -10,6 +10,7 @@ namespace PixelFlow.Runtime.Visuals
         [SerializeField] private PigColor currentColor = PigColor.Pink;
         [SerializeField, Range(AtlasPaletteConstants.MinToneIndex, AtlasPaletteConstants.MaxToneIndex)]
         private int currentToneIndex = AtlasPaletteConstants.DefaultToneIndex;
+        [SerializeField, HideInInspector] private Transform excludedRoot;
 
         public PigColor CurrentColor => currentColor;
         public int CurrentToneIndex => AtlasPaletteConstants.ClampToneIndex(currentToneIndex);
@@ -52,11 +53,58 @@ namespace PixelFlow.Runtime.Visuals
             ApplyCurrentColor();
         }
 
+        public void SetExcludedRoot(Transform root)
+        {
+            if (excludedRoot == root)
+            {
+                return;
+            }
+
+            ClearExcludedRendererOverrides(excludedRoot);
+            excludedRoot = root;
+            ClearExcludedRendererOverrides(excludedRoot);
+            RefreshControlledRenderers();
+        }
+
+        protected override bool ShouldControlRenderer(Renderer rendererCandidate)
+        {
+            if (!base.ShouldControlRenderer(rendererCandidate))
+            {
+                return false;
+            }
+
+            if (excludedRoot == null || rendererCandidate == null)
+            {
+                return true;
+            }
+
+            Transform candidateTransform = rendererCandidate.transform;
+            return candidateTransform != excludedRoot
+                && !candidateTransform.IsChildOf(excludedRoot);
+        }
+
         private void ApplyCurrentColor()
         {
             SetColorAndTone(
                 PigColorAtlasUtility.ResolveColorIndex(currentColor),
                 ResolveToneIndex(currentColor, currentToneIndex));
+        }
+
+        private static void ClearExcludedRendererOverrides(Transform root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    renderers[i].SetPropertyBlock(null);
+                }
+            }
         }
 
         private static int ResolveToneIndex(PigColor color, int toneIndex)

@@ -11,8 +11,17 @@ namespace PixelFlow.Runtime.Composition
     {
         protected override LifetimeScope FindParent()
         {
-            // GameSceneContext constructs EnvironmentContext explicitly after the theme is resolved.
-            // Keeping this scope parentless avoids scene bootstrap order races inside VContainer.
+            var current = transform.parent;
+            while (current != null)
+            {
+                if (current.TryGetComponent<LifetimeScope>(out var parentScope))
+                {
+                    return parentScope;
+                }
+
+                current = current.parent;
+            }
+
             return null;
         }
 
@@ -25,7 +34,7 @@ namespace PixelFlow.Runtime.Composition
             }
 
             environmentContext.ResolveMissingReferences();
-            builder.RegisterComponent(environmentContext);
+            builder.RegisterBuildCallback(container => container.Inject(environmentContext));
         }
     }
 }

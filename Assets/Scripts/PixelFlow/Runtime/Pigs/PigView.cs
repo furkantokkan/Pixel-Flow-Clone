@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using PixelFlow.Runtime.Visuals;
 using UnityEngine;
@@ -10,33 +11,48 @@ namespace PixelFlow.Runtime.Pigs
     [DisallowMultipleComponent]
     public sealed class PigView : MonoBehaviour
     {
-        private static readonly Quaternion VisualFacingOffset = Quaternion.Euler(0f, 180f, 0f);
+        private static readonly Quaternion QueueFacingOffset = Quaternion.Euler(0f, 180f, 0f);
+        private static readonly Quaternion BeltFacingOffset = Quaternion.identity;
 
         [SerializeField] private AtlasColorTarget atlasColorTarget;
         [SerializeField] private TMP_Text ammoText;
         [SerializeField] private Transform visualRoot;
         [SerializeField] private Transform trayRoot;
         [SerializeField] private Transform projectileOrigin;
+        [SerializeField, Min(0f)] private float trayProjectileHeightOffset = 0.12f;
+        [SerializeField, Min(0f)] private float trayProjectileForwardOffset = 0.08f;
 
         private Transform cachedVisualRoot;
         private Quaternion visualRootBaseLocalRotation;
         private bool hasVisualRootBaseRotation;
+        private bool useBeltFacingCorrection;
+        private bool renderersVisible = true;
+        private Renderer[] cachedRenderers = Array.Empty<Renderer>();
+        private Collider[] cachedColliders = Array.Empty<Collider>();
+        private bool targetingSourcesCached;
 
         public Transform ProjectileOrigin => projectileOrigin != null ? projectileOrigin : transform;
+        public Vector3 ProjectileOriginPosition => ResolveProjectileOriginPosition();
+        public Quaternion ProjectileOriginRotation => ResolveProjectileOriginRotation();
+        public Vector3 TargetingOriginPosition => ResolveTargetingOriginPosition();
+        public Vector3 FacingDirection => ResolveFacingDirection();
 
         private void Awake()
         {
             EnsureReferences();
+            ApplyRendererVisibility();
         }
 
         private void Reset()
         {
             EnsureReferences();
+            ApplyRendererVisibility();
         }
 
         private void OnValidate()
         {
             EnsureReferences();
+            ApplyRendererVisibility();
         }
 
         public void Render(PigModel model)
@@ -55,6 +71,8 @@ namespace PixelFlow.Runtime.Pigs
             {
                 trayRoot.gameObject.SetActive(model.TrayVisible);
             }
+
+            ApplyRendererVisibility();
         }
 
         public void Clear()
@@ -68,6 +86,48 @@ namespace PixelFlow.Runtime.Pigs
             {
                 trayRoot.gameObject.SetActive(false);
             }
+
+            SetBeltFacingMode(false);
+            SetRenderersVisible(true);
+        }
+
+        public void SetRenderersVisible(bool visible)
+        {
+            if (renderersVisible == visible)
+            {
+                return;
+            }
+
+            renderersVisible = visible;
+            EnsureReferences();
+            ApplyRendererVisibility();
+        }
+
+        public bool ShouldRenderForCamera(Camera activeCamera, float viewportPadding)
+        {
+            if (activeCamera == null)
+            {
+                return true;
+            }
+
+            EnsureReferences();
+            if (!TryResolveVisibilityBounds(out var bounds))
+            {
+                return true;
+            }
+
+            return IsInsideExpandedViewport(activeCamera, bounds, Mathf.Clamp(viewportPadding, 0f, 0.5f));
+        }
+
+        public void SetBeltFacingMode(bool enabled)
+        {
+            if (useBeltFacingCorrection == enabled)
+            {
+                return;
+            }
+
+            useBeltFacingCorrection = enabled;
+            EnsureReferences();
         }
 
 #if UNITY_EDITOR
@@ -85,7 +145,35 @@ namespace PixelFlow.Runtime.Pigs
             visualRoot ??= ResolveVisualRoot();
             trayRoot ??= ResolveTrayRoot();
             projectileOrigin ??= ResolveProjectileOrigin();
+            CacheTargetingSources();
+            atlasColorTarget?.SetExcludedRoot(trayRoot);
             ApplyVisualFacingCorrection(applyEditorPreviewFacingCorrection);
+        }
+
+        private void CacheTargetingSources()
+        {
+            if (targetingSourcesCached)
+            {
+                return;
+            }
+
+            cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            cachedColliders = GetComponentsInChildren<Collider>(true);
+            targetingSourcesCached = true;
+        }
+
+        private void ApplyRendererVisibility()
+        {
+            for (int i = 0; i < cachedRenderers.Length; i++)
+            {
+                var rendererCandidate = cachedRenderers[i];
+                if (rendererCandidate == null)
+                {
+                    continue;
+                }
+
+                rendererCandidate.enabled = renderersVisible;
+            }
         }
 
         private void ApplyVisualFacingCorrection(bool applyEditorPreviewFacingCorrection = false)
@@ -125,7 +213,11 @@ namespace PixelFlow.Runtime.Pigs
                 hasVisualRootBaseRotation = true;
             }
 
-            visualRoot.localRotation = visualRootBaseLocalRotation * VisualFacingOffset;
+            var facingOffset = useBeltFacingCorrection
+                ? BeltFacingOffset
+                : QueueFacingOffset;
+
+            visualRoot.localRotation = visualRootBaseLocalRotation * facingOffset;
         }
 
         private Transform ResolveVisualRoot()
@@ -190,6 +282,244 @@ namespace PixelFlow.Runtime.Pigs
             }
 
             return transform;
+        }
+
+        private Vector3 ResolveProjectileOriginPosition()
+        {
+            if (projectileOrigin != null && projectileOrigin != transform)
+            {
+                return projectileOrigin.position;
+            }
+
+            if (trayRoot != null)
+            {
+                return trayRoot.position
+                    + (transform.up * trayProjectileHeightOffset)
+                    + (transform.forward * trayProjectileForwardOffset);
+            }
+
+            return transform.position;
+        }
+
+        private Vector3 ResolveTargetingOriginPosition()
+        {
+            if (TryResolveTargetingBounds(out var bounds))
+            {
+                return bounds.center;
+            }
+
+            if (projectileOrigin != null)
+            {
+                return projectileOrigin.position;
+            }
+
+            return transform.position;
+        }
+
+        private Quaternion ResolveProjectileOriginRotation()
+        {
+            if (projectileOrigin != null && projectileOrigin != transform)
+            {
+                return projectileOrigin.rotation;
+            }
+
+            var forward = transform.forward;
+            if (forward.sqrMagnitude <= Mathf.Epsilon)
+            {
+                forward = Vector3.forward;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, transform.up);
+        }
+
+        private Vector3 ResolveFacingDirection()
+        {
+            var forward = projectileOrigin != null && projectileOrigin != transform
+                ? projectileOrigin.forward
+                : transform.forward;
+            return forward.sqrMagnitude > Mathf.Epsilon
+                ? forward.normalized
+                : Vector3.forward;
+        }
+
+        private bool TryResolveVisibilityBounds(out Bounds bounds)
+        {
+            bounds = default;
+            var hasBounds = false;
+            for (int i = 0; i < cachedRenderers.Length; i++)
+            {
+                var rendererCandidate = cachedRenderers[i];
+                if (!IsValidVisibilityRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = rendererCandidate.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(rendererCandidate.bounds);
+            }
+
+            if (hasBounds)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < cachedColliders.Length; i++)
+            {
+                var colliderCandidate = cachedColliders[i];
+                if (!IsValidVisibilityCollider(colliderCandidate))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = colliderCandidate.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(colliderCandidate.bounds);
+            }
+
+            return hasBounds;
+        }
+
+        private bool TryResolveTargetingBounds(out Bounds bounds)
+        {
+            if (TryResolveRendererBounds(out bounds))
+            {
+                return true;
+            }
+
+            return TryResolveColliderBounds(out bounds);
+        }
+
+        private bool TryResolveRendererBounds(out Bounds bounds)
+        {
+            bounds = default;
+            var hasBounds = false;
+            for (int i = 0; i < cachedRenderers.Length; i++)
+            {
+                var rendererCandidate = cachedRenderers[i];
+                if (!IsValidTargetingRenderer(rendererCandidate))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = rendererCandidate.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(rendererCandidate.bounds);
+            }
+
+            return hasBounds;
+        }
+
+        private bool TryResolveColliderBounds(out Bounds bounds)
+        {
+            bounds = default;
+            var hasBounds = false;
+            for (int i = 0; i < cachedColliders.Length; i++)
+            {
+                var colliderCandidate = cachedColliders[i];
+                if (!IsValidTargetingCollider(colliderCandidate))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = colliderCandidate.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(colliderCandidate.bounds);
+            }
+
+            return hasBounds;
+        }
+
+        private bool IsValidTargetingRenderer(Renderer rendererCandidate)
+        {
+            return rendererCandidate != null
+                && rendererCandidate.enabled
+                && rendererCandidate.gameObject.activeInHierarchy
+                && rendererCandidate.GetComponent<TMP_Text>() == null
+                && !IsTrayChild(rendererCandidate.transform);
+        }
+
+        private bool IsValidTargetingCollider(Collider colliderCandidate)
+        {
+            return colliderCandidate != null
+                && colliderCandidate.enabled
+                && colliderCandidate.gameObject.activeInHierarchy
+                && !colliderCandidate.isTrigger
+                && !IsTrayChild(colliderCandidate.transform);
+        }
+
+        private static bool IsInsideExpandedViewport(Camera activeCamera, Bounds bounds, float viewportPadding)
+        {
+            var min = bounds.min;
+            var max = bounds.max;
+
+            return IsInsideExpandedViewport(activeCamera, bounds.center, viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(min.x, min.y, min.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(min.x, min.y, max.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(min.x, max.y, min.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(min.x, max.y, max.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(max.x, min.y, min.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(max.x, min.y, max.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(max.x, max.y, min.z), viewportPadding)
+                || IsInsideExpandedViewport(activeCamera, new Vector3(max.x, max.y, max.z), viewportPadding);
+        }
+
+        private static bool IsInsideExpandedViewport(Camera activeCamera, Vector3 worldPoint, float viewportPadding)
+        {
+            var viewportPoint = activeCamera.WorldToViewportPoint(worldPoint);
+            if (viewportPoint.z <= 0f)
+            {
+                return false;
+            }
+
+            var min = -viewportPadding;
+            var max = 1f + viewportPadding;
+            return viewportPoint.x >= min
+                && viewportPoint.x <= max
+                && viewportPoint.y >= min
+                && viewportPoint.y <= max;
+        }
+
+        private bool IsValidVisibilityRenderer(Renderer rendererCandidate)
+        {
+            return rendererCandidate != null
+                && rendererCandidate.gameObject.activeInHierarchy;
+        }
+
+        private bool IsValidVisibilityCollider(Collider colliderCandidate)
+        {
+            return colliderCandidate != null
+                && colliderCandidate.enabled
+                && colliderCandidate.gameObject.activeInHierarchy
+                && !colliderCandidate.isTrigger;
+        }
+
+        private bool IsTrayChild(Transform candidate)
+        {
+            return trayRoot != null
+                && candidate != null
+                && candidate != trayRoot
+                && candidate.IsChildOf(trayRoot);
         }
     }
 }
