@@ -11,6 +11,7 @@ namespace PixelFlow.Runtime.Levels
 {
     internal sealed class LevelRuntimeSpawner
     {
+        private const int MaxInitialDeckPigSpawnCount = 35;
         private const float QueuedPigVerticalOffset = 0.6f;
 
         private readonly IGameFactory gameFactory;
@@ -38,7 +39,13 @@ namespace PixelFlow.Runtime.Levels
             var spawnedPigs = new List<PigController>();
 
             SpawnBoard(level, boardRoot, spawnedBlocks, targetBlocks);
-            var waitingLanes = SpawnDeck(level, deckRoot, holdingSlotCount, queueEntries, spawnedPigs);
+            var waitingLanes = SpawnDeck(
+                level,
+                deckRoot,
+                holdingSlotCount,
+                queueEntries,
+                spawnedPigs,
+                out var pendingLaneEntries);
 
             return new LevelRuntimeSpawnResult(
                 boardRoot,
@@ -46,7 +53,8 @@ namespace PixelFlow.Runtime.Levels
                 spawnedBlocks,
                 targetBlocks,
                 spawnedPigs,
-                waitingLanes);
+                waitingLanes,
+                pendingLaneEntries);
         }
 
         private int ApplyHoldingSlotCount(LevelData level, IReadOnlyList<PigQueueEntry> queueEntries)
@@ -224,8 +232,10 @@ namespace PixelFlow.Runtime.Levels
             Transform deckRoot,
             int holdingSlotCount,
             IReadOnlyList<PigQueueEntry> queueEntries,
-            ICollection<PigController> spawnedPigs)
+            ICollection<PigController> spawnedPigs,
+            out List<PigQueueEntry>[] pendingLaneEntries)
         {
+            pendingLaneEntries = CreatePendingLaneEntries(holdingSlotCount);
             if (level == null
                 || environment == null
                 || deckRoot == null
@@ -245,11 +255,19 @@ namespace PixelFlow.Runtime.Levels
                 laneEntryIndices[i] = new List<int>();
             }
 
+            var initialSpawnCount = Mathf.Clamp(MaxInitialDeckPigSpawnCount, 0, queueEntries.Count);
             for (int i = 0; i < queueEntries.Count; i++)
             {
                 var entry = queueEntries[i];
                 var slotIndex = Mathf.Clamp(entry.SlotIndex, 0, holdingSlotCount - 1);
-                laneEntryIndices[slotIndex].Add(i);
+                if (i < initialSpawnCount)
+                {
+                    laneEntryIndices[slotIndex].Add(i);
+                }
+                else
+                {
+                    pendingLaneEntries[slotIndex].Add(entry);
+                }
             }
 
             var lanePositions = ResolveDeckLanePositions(deckRoot, holdingSlotCount, out var laneSpacing);
@@ -302,6 +320,22 @@ namespace PixelFlow.Runtime.Levels
             }
 
             return waitingLanes;
+        }
+
+        private static List<PigQueueEntry>[] CreatePendingLaneEntries(int holdingSlotCount)
+        {
+            if (holdingSlotCount <= 0)
+            {
+                return Array.Empty<List<PigQueueEntry>>();
+            }
+
+            var pendingEntries = new List<PigQueueEntry>[holdingSlotCount];
+            for (int i = 0; i < holdingSlotCount; i++)
+            {
+                pendingEntries[i] = new List<PigQueueEntry>();
+            }
+
+            return pendingEntries;
         }
 
         private List<PigQueueEntry> ResolveQueueEntries(LevelData level)

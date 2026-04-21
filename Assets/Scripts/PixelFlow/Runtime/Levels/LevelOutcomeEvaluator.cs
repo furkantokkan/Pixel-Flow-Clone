@@ -18,8 +18,11 @@ namespace PixelFlow.Runtime.Levels
     {
         private const int BurstRemainingPigThreshold = 4;
 
-        private readonly int[] remainingBlockCountsByColor = new int[(int)PigColor.White + 1];
         private readonly int[] remainingAmmoCountsByColor = new int[(int)PigColor.White + 1];
+        private readonly int[] exposureLayerCountsByColor = new int[(int)PigColor.White + 1];
+        private bool[] occupiedBuffer = Array.Empty<bool>();
+        private PigColor[] targetColorsBuffer = Array.Empty<PigColor>();
+        private bool[] exposedTargetsBuffer = Array.Empty<bool>();
 
         public LevelOutcomeDecision Evaluate(
             int remainingTargetBlocks,
@@ -27,11 +30,12 @@ namespace PixelFlow.Runtime.Levels
             bool isHoldingContainerFilled,
             bool allowBurstEntry,
             IReadOnlyList<BlockVisual> spawnedBlocks,
-            IReadOnlyList<PigController> spawnedPigs)
+            IReadOnlyList<PigController> spawnedPigs,
+            IReadOnlyList<PigQueueEntry> pendingQueueEntries)
         {
             var hasPendingTargetResolution = HasPendingTargetResolution(spawnedBlocks);
             var hasPendingPigAction = HasPendingPigAction(spawnedPigs);
-            var hasPigWithRemainingAmmo = HasPigWithRemainingAmmo(spawnedPigs);
+            var hasPigWithRemainingAmmo = HasPigWithRemainingAmmo(spawnedPigs, pendingQueueEntries);
 
             if (remainingTargetBlocks <= 0)
             {
@@ -45,12 +49,12 @@ namespace PixelFlow.Runtime.Levels
                 return LevelOutcomeDecision.None;
             }
 
-            var remainingPigCount = CountPigsWithRemainingAmmo(spawnedPigs);
+            var remainingPigCount = CountPigsWithRemainingAmmo(spawnedPigs, pendingQueueEntries);
             if (!isBurstActive
                 && allowBurstEntry
                 && remainingPigCount > 0
                 && remainingPigCount <= BurstRemainingPigThreshold
-                && IsGuaranteedFromCurrentState(remainingTargetBlocks, spawnedBlocks, spawnedPigs))
+                && IsGuaranteedFromCurrentState(remainingTargetBlocks, spawnedBlocks, spawnedPigs, pendingQueueEntries))
             {
                 return LevelOutcomeDecision.EnterBurst;
             }
@@ -95,6 +99,11 @@ namespace PixelFlow.Runtime.Levels
 
         internal static bool HasPendingPigAction(IReadOnlyList<PigController> spawnedPigs)
         {
+            if (spawnedPigs == null)
+            {
+                return false;
+            }
+
             for (int i = 0; i < spawnedPigs.Count; i++)
             {
                 var pig = spawnedPigs[i];
@@ -118,12 +127,31 @@ namespace PixelFlow.Runtime.Levels
             return false;
         }
 
-        private static bool HasPigWithRemainingAmmo(IReadOnlyList<PigController> spawnedPigs)
+        private static bool HasPigWithRemainingAmmo(
+            IReadOnlyList<PigController> spawnedPigs,
+            IReadOnlyList<PigQueueEntry> pendingQueueEntries)
         {
-            for (int i = 0; i < spawnedPigs.Count; i++)
+            if (spawnedPigs != null)
             {
-                var pig = spawnedPigs[i];
-                if (pig != null && pig.HasAmmo)
+                for (int i = 0; i < spawnedPigs.Count; i++)
+                {
+                    var pig = spawnedPigs[i];
+                    if (pig != null && pig.HasAmmo)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (pendingQueueEntries == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pendingQueueEntries.Count; i++)
+            {
+                var entry = pendingQueueEntries[i];
+                if (entry.Color != PigColor.None && entry.Ammo > 0)
                 {
                     return true;
                 }
@@ -132,20 +160,31 @@ namespace PixelFlow.Runtime.Levels
             return false;
         }
 
-        private static int CountPigsWithRemainingAmmo(IReadOnlyList<PigController> spawnedPigs)
+        private static int CountPigsWithRemainingAmmo(
+            IReadOnlyList<PigController> spawnedPigs,
+            IReadOnlyList<PigQueueEntry> pendingQueueEntries)
         {
-            if (spawnedPigs == null)
+            var count = 0;
+            if (spawnedPigs != null)
             {
-                return 0;
+                for (int i = 0; i < spawnedPigs.Count; i++)
+                {
+                    var pig = spawnedPigs[i];
+                    if (pig != null && pig.HasAmmo)
+                    {
+                        count++;
+                    }
+                }
             }
 
-            var count = 0;
-            for (int i = 0; i < spawnedPigs.Count; i++)
+            if (pendingQueueEntries != null)
             {
-                var pig = spawnedPigs[i];
-                if (pig != null && pig.HasAmmo)
+                for (int i = 0; i < pendingQueueEntries.Count; i++)
                 {
-                    count++;
+                    if (pendingQueueEntries[i].Color != PigColor.None && pendingQueueEntries[i].Ammo > 0)
+                    {
+                        count++;
+                    }
                 }
             }
 
@@ -155,66 +194,72 @@ namespace PixelFlow.Runtime.Levels
         private bool IsGuaranteedFromCurrentState(
             int remainingTargetBlocks,
             IReadOnlyList<BlockVisual> spawnedBlocks,
-            IReadOnlyList<PigController> spawnedPigs)
+            IReadOnlyList<PigController> spawnedPigs,
+            IReadOnlyList<PigQueueEntry> pendingQueueEntries)
         {
             if (remainingTargetBlocks <= 0)
             {
                 return false;
             }
 
-            if (!TryResolveExposureLayers(spawnedBlocks, out var exposureLayers) || exposureLayers.Count == 0)
+            if (!TryBuildTargetGrid(spawnedBlocks, out var width, out var height, out var remainingGridTargets)
+                || remainingGridTargets <= 0)
             {
                 return false;
             }
 
-            Array.Clear(remainingBlockCountsByColor, 0, remainingBlockCountsByColor.Length);
             Array.Clear(remainingAmmoCountsByColor, 0, remainingAmmoCountsByColor.Length);
 
-            for (int i = 0; i < spawnedPigs.Count; i++)
+            if (spawnedPigs != null)
             {
-                var pig = spawnedPigs[i];
-                if (pig == null || !pig.HasAmmo || pig.Color == PigColor.None)
+                for (int i = 0; i < spawnedPigs.Count; i++)
                 {
-                    continue;
-                }
-
-                remainingAmmoCountsByColor[(int)pig.Color] += pig.Ammo;
-            }
-
-            for (int layerIndex = 0; layerIndex < exposureLayers.Count; layerIndex++)
-            {
-                var layer = exposureLayers[layerIndex];
-                if (layer == null)
-                {
-                    continue;
-                }
-
-                foreach (var pair in layer)
-                {
-                    if (pair.Key == PigColor.None || pair.Value <= 0)
+                    var pig = spawnedPigs[i];
+                    if (pig == null || !pig.HasAmmo || pig.Color == PigColor.None)
                     {
                         continue;
                     }
 
-                    var colorIndex = (int)pair.Key;
-                    remainingBlockCountsByColor[colorIndex] += pair.Value;
-                    if (remainingAmmoCountsByColor[colorIndex] < pair.Value)
+                    remainingAmmoCountsByColor[(int)pig.Color] += pig.Ammo;
+                }
+            }
+
+            if (pendingQueueEntries != null)
+            {
+                for (int i = 0; i < pendingQueueEntries.Count; i++)
+                {
+                    var entry = pendingQueueEntries[i];
+                    if (entry.Color == PigColor.None || entry.Ammo <= 0)
                     {
-                        return false;
+                        continue;
                     }
 
-                    remainingAmmoCountsByColor[colorIndex] -= pair.Value;
+                    remainingAmmoCountsByColor[(int)entry.Color] += entry.Ammo;
+                }
+            }
+
+            while (remainingGridTargets > 0)
+            {
+                Array.Clear(exposedTargetsBuffer, 0, width * height);
+                MarkExposedTargets(width, height);
+                if (!TryConsumeExposedLayer(width, height, ref remainingGridTargets))
+                {
+                    return false;
                 }
             }
 
             return true;
         }
 
-        private static bool TryResolveExposureLayers(
+        private bool TryBuildTargetGrid(
             IReadOnlyList<BlockVisual> spawnedBlocks,
-            out List<Dictionary<PigColor, int>> layers)
+            out int width,
+            out int height,
+            out int remainingTargetCount)
         {
-            layers = new List<Dictionary<PigColor, int>>();
+            width = 0;
+            height = 0;
+            remainingTargetCount = 0;
             if (spawnedBlocks == null || spawnedBlocks.Count == 0)
             {
                 return false;
@@ -253,10 +298,12 @@ namespace PixelFlow.Runtime.Levels
                 return false;
             }
 
-            var width = Math.Max(1, maxX - minX + 1);
-            var height = Math.Max(1, maxY - minY + 1);
-            var occupied = new bool[width, height];
-            var targetColors = new PigColor[width, height];
+            width = Math.Max(1, maxX - minX + 1);
+            height = Math.Max(1, maxY - minY + 1);
+            var cellCount = width * height;
+            EnsureGridCapacity(cellCount);
+            Array.Clear(occupiedBuffer, 0, cellCount);
+            Array.Clear(targetColorsBuffer, 0, cellCount);
 
             for (int i = 0; i < spawnedBlocks.Count; i++)
             {
@@ -276,101 +323,67 @@ namespace PixelFlow.Runtime.Levels
                     return false;
                 }
 
-                occupied[gridX, gridY] = true;
-                targetColors[gridX, gridY] = block.Color;
-            }
+                var index = gridX + (gridY * width);
+                occupiedBuffer[index] = true;
 
-            return TryResolveExposureLayers(occupied, targetColors, allowFallbackForRemainingTargets: false, out layers);
-        }
-
-        private static bool TryResolveExposureLayers(
-            bool[,] occupied,
-            PigColor[,] targetColors,
-            bool allowFallbackForRemainingTargets,
-            out List<Dictionary<PigColor, int>> layers)
-        {
-            layers = new List<Dictionary<PigColor, int>>();
-            if (occupied == null || targetColors == null)
-            {
-                return false;
-            }
-
-            var width = occupied.GetLength(0);
-            var height = occupied.GetLength(1);
-            if (width <= 0 || height <= 0)
-            {
-                return false;
-            }
-
-            while (HasRemainingTargets(targetColors))
-            {
-                var exposedTargets = new bool[width, height];
-                MarkExposedTargets(occupied, targetColors, exposedTargets, width, height);
-
-                var layerCounts = CollectAndRemoveExposedTargets(occupied, targetColors, exposedTargets, width, height);
-                if (layerCounts.Count == 0)
+                var previousColor = targetColorsBuffer[index];
+                if (previousColor == PigColor.None && block.Color != PigColor.None)
                 {
-                    if (!allowFallbackForRemainingTargets)
-                    {
-                        layers.Clear();
-                        return false;
-                    }
-
-                    var fallbackCounts = CountRemainingTargets(targetColors, width, height);
-                    if (fallbackCounts.Count > 0)
-                    {
-                        layers.Add(fallbackCounts);
-                    }
-
-                    break;
+                    remainingTargetCount++;
+                }
+                else if (previousColor != PigColor.None && block.Color == PigColor.None)
+                {
+                    remainingTargetCount--;
                 }
 
-                layers.Add(layerCounts);
+                targetColorsBuffer[index] = block.Color;
             }
 
             return true;
         }
 
-        private static void MarkExposedTargets(
-            bool[,] occupied,
-            PigColor[,] targetColors,
-            bool[,] exposedTargets,
-            int width,
-            int height)
+        private void EnsureGridCapacity(int cellCount)
+        {
+            if (occupiedBuffer.Length >= cellCount)
+            {
+                return;
+            }
+
+            occupiedBuffer = new bool[cellCount];
+            targetColorsBuffer = new PigColor[cellCount];
+            exposedTargetsBuffer = new bool[cellCount];
+        }
+
+        private void MarkExposedTargets(int width, int height)
         {
             for (int y = 0; y < height; y++)
             {
-                MarkFirstOccupiedInRow(occupied, targetColors, exposedTargets, y, width, leftToRight: true);
-                MarkFirstOccupiedInRow(occupied, targetColors, exposedTargets, y, width, leftToRight: false);
+                MarkFirstOccupiedInRow(y, width, leftToRight: true);
+                MarkFirstOccupiedInRow(y, width, leftToRight: false);
             }
 
             for (int x = 0; x < width; x++)
             {
-                MarkFirstOccupiedInColumn(occupied, targetColors, exposedTargets, x, height, bottomToTop: true);
-                MarkFirstOccupiedInColumn(occupied, targetColors, exposedTargets, x, height, bottomToTop: false);
+                MarkFirstOccupiedInColumn(x, width, height, bottomToTop: true);
+                MarkFirstOccupiedInColumn(x, width, height, bottomToTop: false);
             }
         }
 
-        private static void MarkFirstOccupiedInRow(
-            bool[,] occupied,
-            PigColor[,] targetColors,
-            bool[,] exposedTargets,
-            int rowIndex,
-            int width,
-            bool leftToRight)
+        private void MarkFirstOccupiedInRow(int rowIndex, int width, bool leftToRight)
         {
             if (leftToRight)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    if (!occupied[x, rowIndex])
+                    var index = x + (rowIndex * width);
+                    if (!occupiedBuffer[index])
                     {
                         continue;
                     }
 
-                    if (targetColors[x, rowIndex] != PigColor.None)
+                    if (targetColorsBuffer[index] != PigColor.None)
                     {
-                        exposedTargets[x, rowIndex] = true;
+                        exposedTargetsBuffer[index] = true;
                     }
 
                     break;
@@ -381,40 +394,36 @@ namespace PixelFlow.Runtime.Levels
 
             for (int x = width - 1; x >= 0; x--)
             {
-                if (!occupied[x, rowIndex])
+                var index = x + (rowIndex * width);
+                if (!occupiedBuffer[index])
                 {
                     continue;
                 }
 
-                if (targetColors[x, rowIndex] != PigColor.None)
+                if (targetColorsBuffer[index] != PigColor.None)
                 {
-                    exposedTargets[x, rowIndex] = true;
+                    exposedTargetsBuffer[index] = true;
                 }
 
                 break;
             }
         }
 
-        private static void MarkFirstOccupiedInColumn(
-            bool[,] occupied,
-            PigColor[,] targetColors,
-            bool[,] exposedTargets,
-            int columnIndex,
-            int height,
-            bool bottomToTop)
+        private void MarkFirstOccupiedInColumn(int columnIndex, int width, int height, bool bottomToTop)
         {
             if (bottomToTop)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    if (!occupied[columnIndex, y])
+                    var index = columnIndex + (y * width);
+                    if (!occupiedBuffer[index])
                     {
                         continue;
                     }
 
-                    if (targetColors[columnIndex, y] != PigColor.None)
+                    if (targetColorsBuffer[index] != PigColor.None)
                     {
-                        exposedTargets[columnIndex, y] = true;
+                        exposedTargetsBuffer[index] = true;
                     }
 
                     break;
@@ -425,106 +434,71 @@ namespace PixelFlow.Runtime.Levels
 
             for (int y = height - 1; y >= 0; y--)
             {
-                if (!occupied[columnIndex, y])
+                var index = columnIndex + (y * width);
+                if (!occupiedBuffer[index])
                 {
                     continue;
                 }
 
-                if (targetColors[columnIndex, y] != PigColor.None)
+                if (targetColorsBuffer[index] != PigColor.None)
                 {
-                    exposedTargets[columnIndex, y] = true;
+                    exposedTargetsBuffer[index] = true;
                 }
 
                 break;
             }
         }
 
-        private static Dictionary<PigColor, int> CollectAndRemoveExposedTargets(
-            bool[,] occupied,
-            PigColor[,] targetColors,
-            bool[,] exposedTargets,
-            int width,
-            int height)
+        private bool TryConsumeExposedLayer(int width, int height, ref int remainingTargetCount)
         {
-            var counts = new Dictionary<PigColor, int>();
-            for (int x = 0; x < width; x++)
+            Array.Clear(exposureLayerCountsByColor, 0, exposureLayerCountsByColor.Length);
+            var exposedTargetCount = 0;
+            for (int y = 0; y < height; y++)
             {
-                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
                 {
-                    if (!exposedTargets[x, y])
+                    var index = x + (y * width);
+                    if (!exposedTargetsBuffer[index])
                     {
                         continue;
                     }
 
-                    var color = targetColors[x, y];
+                    var color = targetColorsBuffer[index];
                     if (color == PigColor.None)
                     {
                         continue;
                     }
 
-                    if (!counts.TryGetValue(color, out var currentCount))
-                    {
-                        counts[color] = 1;
-                    }
-                    else
-                    {
-                        counts[color] = currentCount + 1;
-                    }
-
-                    targetColors[x, y] = PigColor.None;
-                    occupied[x, y] = false;
+                    exposureLayerCountsByColor[(int)color]++;
+                    targetColorsBuffer[index] = PigColor.None;
+                    occupiedBuffer[index] = false;
+                    remainingTargetCount--;
+                    exposedTargetCount++;
                 }
             }
 
-            return counts;
-        }
-
-        private static Dictionary<PigColor, int> CountRemainingTargets(
-            PigColor[,] targetColors,
-            int width,
-            int height)
-        {
-            var counts = new Dictionary<PigColor, int>();
-            for (int x = 0; x < width; x++)
+            if (exposedTargetCount <= 0)
             {
-                for (int y = 0; y < height; y++)
-                {
-                    var color = targetColors[x, y];
-                    if (color == PigColor.None)
-                    {
-                        continue;
-                    }
-
-                    if (!counts.TryGetValue(color, out var currentCount))
-                    {
-                        counts[color] = 1;
-                    }
-                    else
-                    {
-                        counts[color] = currentCount + 1;
-                    }
-                }
+                return false;
             }
 
-            return counts;
-        }
-
-        private static bool HasRemainingTargets(PigColor[,] targetColors)
-        {
-            var width = targetColors.GetLength(0);
-            var height = targetColors.GetLength(1);
-            for (int x = 0; x < width; x++)
+            for (int colorIndex = 0; colorIndex < exposureLayerCountsByColor.Length; colorIndex++)
             {
-                for (int y = 0; y < height; y++)
+                var count = exposureLayerCountsByColor[colorIndex];
+                if (count <= 0)
                 {
-                    if (targetColors[x, y] != PigColor.None)
-                    {
-                        return true;
-                    }
+                    continue;
                 }
+
+                if (remainingAmmoCountsByColor[colorIndex] < count)
+                {
+                    return false;
+                }
+
+                remainingAmmoCountsByColor[colorIndex] -= count;
             }
 
-            return false;
+            return true;
         }
     }
 }

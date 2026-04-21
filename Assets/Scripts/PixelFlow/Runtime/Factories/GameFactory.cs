@@ -1,4 +1,5 @@
 using PixelFlow.Runtime.Bullets;
+using PixelFlow.Runtime.Audio;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Pooling;
 using PixelFlow.Runtime.Visuals;
@@ -8,10 +9,12 @@ namespace PixelFlow.Runtime.Factories
     public sealed class GameFactory : IGameFactory
     {
         private readonly IVisualPoolService visualPool;
+        private readonly ISoundService soundService;
 
-        public GameFactory(IVisualPoolService visualPool)
+        public GameFactory(IVisualPoolService visualPool, ISoundService soundService)
         {
             this.visualPool = visualPool;
+            this.soundService = soundService;
         }
 
         public PigController CreatePig(PigSpawnRequest request)
@@ -53,6 +56,8 @@ namespace PixelFlow.Runtime.Factories
             request.Placement.ApplyPoseTo(bullet.transform);
             bullet.Completed -= HandleBulletCompleted;
             bullet.Completed += HandleBulletCompleted;
+            bullet.HitBlock -= HandleBulletHitBlock;
+            bullet.HitBlock += HandleBulletHitBlock;
             bullet.Launch(request.Color, request.Target, request.TargetBlock, request.Speed, request.MaxLifetime);
             return bullet;
         }
@@ -77,6 +82,7 @@ namespace PixelFlow.Runtime.Factories
             if (bullet != null)
             {
                 bullet.Completed -= HandleBulletCompleted;
+                bullet.HitBlock -= HandleBulletHitBlock;
             }
 
             visualPool?.ReturnBullet(bullet);
@@ -90,6 +96,11 @@ namespace PixelFlow.Runtime.Factories
         private void HandleBulletCompleted(BulletController bullet)
         {
             ReleaseBullet(bullet);
+        }
+
+        private void HandleBulletHitBlock(BulletController _, BlockVisual __)
+        {
+            soundService?.PlayPop();
         }
     }
 }

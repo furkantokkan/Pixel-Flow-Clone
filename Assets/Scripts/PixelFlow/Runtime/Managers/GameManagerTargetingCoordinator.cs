@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PixelFlow.Runtime.Audio;
 using PixelFlow.Runtime.Factories;
 using PixelFlow.Runtime.LevelEditing;
 using PixelFlow.Runtime.Pigs;
@@ -13,6 +14,7 @@ namespace PixelFlow.Runtime.Managers
 
         private readonly List<PigController> activeConveyorPigs;
         private readonly List<PigController> conveyorPigBuffer = new();
+        private readonly ISoundService soundService;
 
         private EnvironmentContext environment;
         private IGameFactory gameFactory;
@@ -21,9 +23,10 @@ namespace PixelFlow.Runtime.Managers
         private float beltShotDistance;
         private LayerMask beltShotLayerMask;
 
-        public GameManagerTargetingCoordinator(List<PigController> activeConveyorPigs)
+        public GameManagerTargetingCoordinator(List<PigController> activeConveyorPigs, ISoundService soundService)
         {
             this.activeConveyorPigs = activeConveyorPigs;
+            this.soundService = soundService;
         }
 
         public IReadOnlyList<PigController> ActiveConveyorPigs => activeConveyorPigs;
@@ -143,6 +146,8 @@ namespace PixelFlow.Runtime.Managers
                     rotation: pig.ProjectileOriginRotation,
                     useWorldSpace: true)));
 
+            soundService?.PlayShoot();
+
             if (!pig.HasAmmo)
             {
                 onPigDepleted?.Invoke(pig);
@@ -156,14 +161,19 @@ namespace PixelFlow.Runtime.Managers
                 return null;
             }
 
-            var direction = pig.FacingDirection;
+            var direction = pig.transform.forward;
+            if (direction.sqrMagnitude <= TargetSelectionEpsilon)
+            {
+                direction = pig.FacingDirection;
+            }
+
             if (direction.sqrMagnitude <= TargetSelectionEpsilon)
             {
                 return null;
             }
 
             var normalizedDirection = direction.normalized;
-            var origin = pig.TargetingOriginPosition
+            var origin = pig.transform.position
                 + (normalizedDirection * Mathf.Max(0f, beltShotOriginForwardOffset));
             if (!Physics.SphereCast(
                 origin,

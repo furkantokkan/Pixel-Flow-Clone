@@ -32,7 +32,7 @@ namespace PixelFlow.Runtime.Composition
         [SerializeField, Min(0.01f)] private float burstFireIntervalMultiplier = 0.7f;
 
         [Header("Input")]
-        [SerializeField] private LayerMask pigLayerMask = 1 << 7;
+        [SerializeField] private LayerMask pigLayerMask = 1 << 6;
         [SerializeField, Min(1f)] private float maxRayDistance = 500f;
 
         public PigController PigPrefab => pigPrefab;
@@ -77,12 +77,16 @@ namespace PixelFlow.Runtime.Composition
             burstFireIntervalMultiplier = Mathf.Max(0.01f, burstFireIntervalMultiplier);
             maxRayDistance = Mathf.Max(1f, maxRayDistance);
 
+            var pigLayer = LayerMask.NameToLayer("Pig");
             if (pigLayerMask.value == 0)
             {
-                var pigLayer = LayerMask.NameToLayer("Pig");
                 pigLayerMask = pigLayer >= 0
                     ? 1 << pigLayer
-                    : 1 << 7;
+                    : 1 << 6;
+            }
+            else if (pigLayer >= 0)
+            {
+                pigLayerMask |= 1 << pigLayer;
             }
         }
 

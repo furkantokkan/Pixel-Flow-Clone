@@ -123,13 +123,13 @@ namespace PixelFlow.Runtime.Managers
                     0f,
                     1f,
                     burstRampDuration,
-                    (target, linearProgress) =>
+                    static (target, linearProgress) =>
                     {
                         target.burstRampProgress = 1f - Mathf.Pow(1f - linearProgress, 2f);
                         target.ApplyBurstModifiersToAllKnownPigs();
                     },
                     Ease.Linear)
-                .OnComplete(this, target =>
+                .OnComplete(this, static target =>
                 {
                     target.burstRampTween = default;
                     target.burstRampProgress = 1f;

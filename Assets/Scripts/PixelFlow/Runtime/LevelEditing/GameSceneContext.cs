@@ -20,7 +20,6 @@ namespace PixelFlow.Runtime.LevelEditing
         [SerializeField] private GameManager gameManager;
         [SerializeField] private InputManager inputManager;
         [SerializeField] private LevelSessionController levelSessionController;
-        [SerializeField] private Volume globalVolume;
         [SerializeField] private bool optimizeGlobalVolumeForMobile = true;
 
         private GameSceneHudView gameSceneHudView;
@@ -303,7 +302,6 @@ namespace PixelFlow.Runtime.LevelEditing
             inputManager ??= GetComponent<InputManager>();
             levelSessionController ??= GetComponent<LevelSessionController>();
             gameSceneHudView ??= FindFirstObjectByType<GameSceneHudView>(FindObjectsInactive.Include);
-            globalVolume ??= ResolveGlobalVolume();
 
             if (levelSessionController == null && addMissingLevelSessionController)
             {
@@ -318,20 +316,6 @@ namespace PixelFlow.Runtime.LevelEditing
                 || !Application.isMobilePlatform)
             {
                 return;
-            }
-
-            globalVolume ??= ResolveGlobalVolume();
-            if (globalVolume == null || globalVolume.sharedProfile == null)
-            {
-                return;
-            }
-
-            if (runtimeMobileVolumeProfile == null)
-            {
-                runtimeMobileVolumeProfile = Instantiate(globalVolume.sharedProfile);
-                runtimeMobileVolumeProfile.name = $"{globalVolume.sharedProfile.name}_MobileRuntime";
-                runtimeMobileVolumeProfile.hideFlags = HideFlags.DontSave;
-                globalVolume.sharedProfile = runtimeMobileVolumeProfile;
             }
 
             DisableMobileExpensiveVolumeEffects(runtimeMobileVolumeProfile);
@@ -357,26 +341,6 @@ namespace PixelFlow.Runtime.LevelEditing
             {
                 component.active = false;
             }
-        }
-
-        private Volume ResolveGlobalVolume()
-        {
-            var volumes = FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < volumes.Length; i++)
-            {
-                var candidate = volumes[i];
-                if (candidate == null || candidate.gameObject.scene != gameObject.scene)
-                {
-                    continue;
-                }
-
-                if (candidate.isGlobal)
-                {
-                    return candidate;
-                }
-            }
-
-            return null;
         }
 
         private void TryAutoAssignSceneReferences()

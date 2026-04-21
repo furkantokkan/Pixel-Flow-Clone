@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Visuals;
 using UnityEngine;
@@ -13,7 +14,8 @@ namespace PixelFlow.Runtime.Levels
             List<BlockVisual> spawnedBlocks,
             List<BlockVisual> targetBlocks,
             List<PigController> spawnedPigs,
-            List<PigController>[] waitingLanes)
+            List<PigController>[] waitingLanes,
+            List<PigQueueEntry>[] pendingLaneEntries)
         {
             BoardRoot = boardRoot;
             DeckRoot = deckRoot;
@@ -21,6 +23,7 @@ namespace PixelFlow.Runtime.Levels
             TargetBlocks = targetBlocks;
             SpawnedPigs = spawnedPigs;
             WaitingLanes = waitingLanes;
+            PendingLaneEntries = pendingLaneEntries;
         }
 
         public Transform BoardRoot { get; }
@@ -29,5 +32,6 @@ namespace PixelFlow.Runtime.Levels
         public List<BlockVisual> TargetBlocks { get; }
         public List<PigController> SpawnedPigs { get; }
         public List<PigController>[] WaitingLanes { get; }
+        public List<PigQueueEntry>[] PendingLaneEntries { get; }
     }
 }

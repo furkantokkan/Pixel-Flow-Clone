@@ -23,10 +23,16 @@ namespace PixelFlow.Runtime.Visuals
         private int defaultToneIndex;
         private Collider[] colliders;
         private Tween destroyTween;
+        private Vector3 destroyStartScale;
+        private Vector3 destroyPopScale;
+        private float destroyPopDuration;
+        private float destroyShrinkDuration;
+        private float destroyTotalDuration;
         private int runtimeGridX = int.MinValue;
         private int runtimeGridY = int.MinValue;
 
         public event Action<BlockVisual> Destroyed;
+        public event Action<BlockVisual> StateChanged;
 
         public PigColor Color => model.Color;
         public bool IsReserved => model.IsReserved;
@@ -68,6 +74,7 @@ namespace PixelFlow.Runtime.Visuals
         {
             model.Configure(color, toneIndex);
             RenderCurrentState();
+            NotifyStateChanged();
         }
 
         public void ConfigureBlock(PigColor color)
@@ -82,8 +89,14 @@ namespace PixelFlow.Runtime.Visuals
 
         public void SetReserved(bool reserved)
         {
+            if (model.IsReserved == reserved)
+            {
+                return;
+            }
+
             model.SetReserved(reserved);
             RenderCurrentState();
+            NotifyStateChanged();
         }
 
         public void SetRuntimeGridPosition(int gridX, int gridY)
@@ -103,6 +116,7 @@ namespace PixelFlow.Runtime.Visuals
             model.SetDying(true);
             SetCollidersEnabled(false);
             RenderCurrentState();
+            NotifyStateChanged();
 
             CancelDestroySequence();
             StartDestroySequence();
@@ -126,6 +140,8 @@ namespace PixelFlow.Runtime.Visuals
             {
                 RenderCurrentState();
             }
+
+            NotifyStateChanged();
         }
 
         public void OnSpawned()
@@ -165,25 +181,26 @@ namespace PixelFlow.Runtime.Visuals
         {
             view?.SetVisible(true);
 
-            var startScale = defaultLocalScale;
-            var popScale = startScale * ResolveDestroyPopScaleMultiplier();
-            var popDuration = ResolveDestroyPopDuration();
-            var shrinkDuration = ResolveDestroyShrinkDuration();
-            var totalDuration = Mathf.Max(0.01f, popDuration + shrinkDuration);
+            destroyStartScale = defaultLocalScale;
+            destroyPopScale = destroyStartScale * ResolveDestroyPopScaleMultiplier();
+            destroyPopDuration = ResolveDestroyPopDuration();
+            destroyShrinkDuration = ResolveDestroyShrinkDuration();
+            destroyTotalDuration = Mathf.Max(0.01f, destroyPopDuration + destroyShrinkDuration);
             destroyTween = Tween.Custom(
                     this,
                     0f,
-                    totalDuration,
-                    totalDuration,
-                    (target, elapsed) => target.UpdateDestroyTween(startScale, popScale, popDuration, shrinkDuration, elapsed),
+                    destroyTotalDuration,
+                    destroyTotalDuration,
+                    static (target, elapsed) => target.UpdateDestroyTween(elapsed),
                     Ease.Linear)
-                .OnComplete(this, target => target.CompleteDestroySequence());
+                .OnComplete(this, static target => target.CompleteDestroySequence());
         }
 
         private void CompleteDestroySequence()
         {
             destroyTween = default;
             transform.localScale = Vector3.zero;
+            NotifyStateChanged();
             Destroyed?.Invoke(this);
 
             if (gameObject.activeSelf)
@@ -203,32 +220,31 @@ namespace PixelFlow.Runtime.Visuals
             destroyTween = default;
         }
 
-        private void UpdateDestroyTween(
-            Vector3 startScale,
-            Vector3 popScale,
-            float popDuration,
-            float shrinkDuration,
-            float elapsed)
+        private void UpdateDestroyTween(float elapsed)
         {
-            var totalDuration = Mathf.Max(0.01f, popDuration + shrinkDuration);
-            elapsed = Mathf.Clamp(elapsed, 0f, totalDuration);
+            elapsed = Mathf.Clamp(elapsed, 0f, destroyTotalDuration);
 
-            if (elapsed <= popDuration)
+            if (elapsed <= destroyPopDuration)
             {
-                var t = popDuration <= 0.0001f ? 1f : Mathf.Clamp01(elapsed / popDuration);
-                transform.localScale = Vector3.LerpUnclamped(startScale, popScale, t);
+                var t = destroyPopDuration <= 0.0001f ? 1f : Mathf.Clamp01(elapsed / destroyPopDuration);
+                transform.localScale = Vector3.LerpUnclamped(destroyStartScale, destroyPopScale, t);
                 return;
             }
 
-            var shrinkElapsed = elapsed - popDuration;
-            var shrinkT = shrinkDuration <= 0.0001f ? 1f : Mathf.Clamp01(shrinkElapsed / shrinkDuration);
-            transform.localScale = Vector3.LerpUnclamped(popScale, Vector3.zero, shrinkT);
+            var shrinkElapsed = elapsed - destroyPopDuration;
+            var shrinkT = destroyShrinkDuration <= 0.0001f ? 1f : Mathf.Clamp01(shrinkElapsed / destroyShrinkDuration);
+            transform.localScale = Vector3.LerpUnclamped(destroyPopScale, Vector3.zero, shrinkT);
         }
 
         private void RenderCurrentState()
         {
             EnsureReferences();
             view?.Render(model);
+        }
+
+        private void NotifyStateChanged()
+        {
+            StateChanged?.Invoke(this);
         }
 
         private void SetCollidersEnabled(bool enabled)

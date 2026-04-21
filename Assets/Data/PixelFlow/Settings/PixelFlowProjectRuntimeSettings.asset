@@ -33,5 +33,5 @@ MonoBehaviour:
   burstFireIntervalMultiplier: 0.7
   pigLayerMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 64
   maxRayDistance: 500

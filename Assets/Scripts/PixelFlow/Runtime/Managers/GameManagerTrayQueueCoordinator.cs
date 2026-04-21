@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using PixelFlow.Runtime.Audio;
+using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.LevelEditing;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Tray;
@@ -19,6 +21,8 @@ namespace PixelFlow.Runtime.Managers
         private readonly HashSet<ActiveTrayTransfer> activeTrayTransfers = new();
         private readonly Stack<Transform> trayTransferVisualPool = new();
         private readonly List<List<PigController>> waitingLanes;
+        private readonly List<List<PigQueueEntry>> pendingLaneEntries = new();
+        private readonly List<PigQueueEntry> pendingQueueEntries = new();
         private readonly Dictionary<PigController, int> pigLaneLookup;
         private readonly Dictionary<PigController, int> pigHoldingLookup;
         private readonly Func<EnvironmentContext> environmentProvider;
@@ -29,7 +33,10 @@ namespace PixelFlow.Runtime.Managers
         private readonly Action<PigController> releasePig;
         private readonly Action triggerLevelFail;
         private readonly Action dispatchBurstPigs;
+        private readonly Action outcomeStateChanged;
+        private readonly Func<PigQueueEntry, int, PigController> spawnQueuedPig;
         private readonly Func<Vector3> resolveTrayEquipPosition;
+        private readonly ISoundService soundService;
 
         private float traySendDuration = 0.45f;
         private float trayReturnDuration = 0.6f;
@@ -52,7 +59,10 @@ namespace PixelFlow.Runtime.Managers
             Action<PigController> releasePig,
             Action triggerLevelFail,
             Action dispatchBurstPigs,
-            Func<Vector3> resolveTrayEquipPosition)
+            Action outcomeStateChanged,
+            Func<PigQueueEntry, int, PigController> spawnQueuedPig,
+            Func<Vector3> resolveTrayEquipPosition,
+            ISoundService soundService)
         {
             this.queuedPigs = queuedPigs;
             this.holdingPigs = holdingPigs;
@@ -69,12 +79,16 @@ namespace PixelFlow.Runtime.Managers
             this.releasePig = releasePig;
             this.triggerLevelFail = triggerLevelFail;
             this.dispatchBurstPigs = dispatchBurstPigs;
+            this.outcomeStateChanged = outcomeStateChanged;
+            this.spawnQueuedPig = spawnQueuedPig;
             this.resolveTrayEquipPosition = resolveTrayEquipPosition;
+            this.soundService = soundService;
         }
 
         public int AvailableTrayCount { get; private set; }
         public int LastKnownCapacity { get; private set; } = -1;
         public int HoldingPigCount => CountHoldingPigs();
+        public IReadOnlyList<PigQueueEntry> PendingQueueEntries => pendingQueueEntries;
 
         private EnvironmentContext Environment => environmentProvider();
         private int QueueCapacity => queueCapacityProvider();
@@ -105,11 +119,14 @@ namespace PixelFlow.Runtime.Managers
             PrewarmTrayTransferVisuals(1);
         }
 
-        public void InitializeWaitingLanes(IReadOnlyList<List<PigController>> lanes)
+        public void InitializeWaitingLanes(
+            IReadOnlyList<List<PigController>> lanes,
+            IReadOnlyList<List<PigQueueEntry>> pendingEntries)
         {
             ResetWaitingLaneState();
             EnsureWaitingLaneCount();
             EnsureHoldingSlotCount();
+            EnsurePendingLaneCount();
 
             if (lanes != null)
             {
@@ -134,6 +151,22 @@ namespace PixelFlow.Runtime.Managers
                         pigLaneLookup[pig] = laneIndex;
                         targetLane.Add(pig);
                     }
+                }
+            }
+
+            if (pendingEntries != null)
+            {
+                var laneCount = Mathf.Min(pendingEntries.Count, pendingLaneEntries.Count);
+                for (int laneIndex = 0; laneIndex < laneCount; laneIndex++)
+                {
+                    var sourceLane = pendingEntries[laneIndex];
+                    if (sourceLane == null || sourceLane.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    pendingLaneEntries[laneIndex].AddRange(sourceLane);
+                    pendingQueueEntries.AddRange(sourceLane);
                 }
             }
 
@@ -206,6 +239,7 @@ namespace PixelFlow.Runtime.Managers
             {
                 waitingLanes[laneIndex].RemoveAt(0);
                 pigLaneLookup.Remove(pig);
+                TrySpawnPendingPigForLane(laneIndex);
             }
             else if (TryGetHoldingSlotIndex(pig, out var holdingSlotIndex))
             {
@@ -228,7 +262,7 @@ namespace PixelFlow.Runtime.Managers
 
             SubscribeConveyorPigLifecycle(pig);
             registerConveyorPig?.Invoke(pig);
-            RefreshQueueVisuals();
+            outcomeStateChanged?.Invoke();
             return true;
         }
 
@@ -328,6 +362,7 @@ namespace PixelFlow.Runtime.Managers
             pigLaneLookup.Clear();
             pigHoldingLookup.Clear();
             queuedPigs.Clear();
+            ClearPendingLaneEntries();
             ResetTrayRuntimeState();
             trayStackVisuals.Clear();
             LastKnownCapacity = -1;
@@ -363,6 +398,7 @@ namespace PixelFlow.Runtime.Managers
             }
 
             LastKnownCapacity = QueueCapacity;
+            outcomeStateChanged?.Invoke();
         }
 
         public void HandlePigDepleted(PigController pig)
@@ -415,6 +451,8 @@ namespace PixelFlow.Runtime.Managers
 
             pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
             pig.ConveyorLoopCompleted += HandlePigConveyorLoopCompleted;
+            pig.DispatchToBeltCompleted -= HandlePigDispatchToBeltCompleted;
+            pig.DispatchToBeltCompleted += HandlePigDispatchToBeltCompleted;
             pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
             pig.BeltDepleteCompleted -= HandlePigBeltDepleteCompleted;
         }
@@ -427,6 +465,7 @@ namespace PixelFlow.Runtime.Managers
             }
 
             pig.ConveyorLoopCompleted -= HandlePigConveyorLoopCompleted;
+            pig.DispatchToBeltCompleted -= HandlePigDispatchToBeltCompleted;
             pig.ReturnedToWaiting -= HandlePigReturnedToWaiting;
             pig.BeltDepleteCompleted -= HandlePigBeltDepleteCompleted;
         }
@@ -655,6 +694,20 @@ namespace PixelFlow.Runtime.Managers
             }
         }
 
+        private void EnsurePendingLaneCount()
+        {
+            var capacity = Mathf.Max(QueueCapacity, 0);
+            while (pendingLaneEntries.Count < capacity)
+            {
+                pendingLaneEntries.Add(new List<PigQueueEntry>());
+            }
+
+            while (pendingLaneEntries.Count > capacity)
+            {
+                pendingLaneEntries.RemoveAt(pendingLaneEntries.Count - 1);
+            }
+        }
+
         private void EnsureHoldingSlotCount()
         {
             var capacity = Mathf.Max(QueueCapacity, 0);
@@ -733,6 +786,7 @@ namespace PixelFlow.Runtime.Managers
             var trayStartPosition = ResolveTraySendStartPosition();
             AvailableTrayCount = Mathf.Max(0, AvailableTrayCount - 1);
             RefreshQueueVisuals();
+            soundService?.PlayJump();
             StartTrayTransfer(trayStartPosition, ResolveTrayEquipPosition(), traySendDuration, incrementTrayCountOnComplete: false);
             return true;
         }
@@ -744,6 +798,7 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
+            soundService?.PlayJump();
             StartTrayTransfer(startPosition, ResolveTrayReturnTargetPosition(), trayReturnDuration, incrementTrayCountOnComplete: true);
         }
 
@@ -774,16 +829,21 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
-            var transfer = new ActiveTrayTransfer(trayTransform);
+            var transfer = new ActiveTrayTransfer(
+                this,
+                trayTransform,
+                startPosition,
+                endPosition,
+                incrementTrayCountOnComplete);
             activeTrayTransfers.Add(transfer);
             transfer.Tween = Tween.Custom(
-                    this,
+                    transfer,
                     0f,
                     1f,
                     Mathf.Max(0.01f, duration),
-                    (target, t) => target.UpdateTrayTransfer(transfer, startPosition, endPosition, t),
+                    static (target, t) => target.Update(t),
                     Ease.Linear)
-                .OnComplete(this, target => target.CompleteTrayTransfer(transfer, endPosition, incrementTrayCountOnComplete));
+                .OnComplete(transfer, static target => target.Complete());
         }
 
         private Transform CreateAnimatedTrayVisual(Vector3 startPosition)
@@ -834,19 +894,19 @@ namespace PixelFlow.Runtime.Managers
             return trayTransform;
         }
 
-        private void UpdateTrayTransfer(ActiveTrayTransfer transfer, Vector3 startPosition, Vector3 endPosition, float t)
+        private void UpdateTrayTransfer(ActiveTrayTransfer transfer, float t)
         {
             if (transfer?.Transform == null)
             {
                 return;
             }
 
-            var position = Vector3.Lerp(startPosition, endPosition, t);
+            var position = Vector3.Lerp(transfer.StartPosition, transfer.EndPosition, t);
             position.y += Mathf.Sin(t * Mathf.PI) * trayTransferArcHeight;
             transfer.Transform.position = position;
         }
 
-        private void CompleteTrayTransfer(ActiveTrayTransfer transfer, Vector3 endPosition, bool incrementTrayCountOnComplete)
+        private void CompleteTrayTransfer(ActiveTrayTransfer transfer)
         {
             if (transfer == null)
             {
@@ -856,10 +916,10 @@ namespace PixelFlow.Runtime.Managers
             transfer.Tween = default;
             if (transfer.Transform != null)
             {
-                transfer.Transform.position = endPosition;
+                transfer.Transform.position = transfer.EndPosition;
             }
 
-            if (incrementTrayCountOnComplete)
+            if (transfer.IncrementTrayCountOnComplete)
             {
                 CompleteTrayReturn();
             }
@@ -1118,6 +1178,17 @@ namespace PixelFlow.Runtime.Managers
             pigLaneLookup.Clear();
             pigHoldingLookup.Clear();
             queuedPigs.Clear();
+            ClearPendingLaneEntries();
+        }
+
+        private void ClearPendingLaneEntries()
+        {
+            for (int laneIndex = 0; laneIndex < pendingLaneEntries.Count; laneIndex++)
+            {
+                pendingLaneEntries[laneIndex].Clear();
+            }
+
+            pendingQueueEntries.Clear();
         }
 
         private int CountHoldingPigs()
@@ -1222,6 +1293,16 @@ namespace PixelFlow.Runtime.Managers
             dispatchBurstPigs?.Invoke();
         }
 
+        private void HandlePigDispatchToBeltCompleted(PigController pig)
+        {
+            if (pig != null)
+            {
+                pig.DispatchToBeltCompleted -= HandlePigDispatchToBeltCompleted;
+            }
+
+            RefreshQueueVisuals();
+        }
+
         private bool TryAssignPigToHoldingSlot(PigController pig)
         {
             if (pig == null)
@@ -1253,6 +1334,53 @@ namespace PixelFlow.Runtime.Managers
             dispatchBurstPigs?.Invoke();
         }
 
+        private void TrySpawnPendingPigForLane(int laneIndex)
+        {
+            if (laneIndex < 0
+                || laneIndex >= pendingLaneEntries.Count
+                || laneIndex >= waitingLanes.Count
+                || spawnQueuedPig == null)
+            {
+                return;
+            }
+
+            var laneEntries = pendingLaneEntries[laneIndex];
+            if (laneEntries == null || laneEntries.Count == 0)
+            {
+                return;
+            }
+
+            var pig = spawnQueuedPig(laneEntries[0], laneIndex);
+            if (pig == null)
+            {
+                return;
+            }
+
+            pendingQueueEntries.Remove(laneEntries[0]);
+            laneEntries.RemoveAt(0);
+
+            pigLaneLookup[pig] = laneIndex;
+            waitingLanes[laneIndex].Add(pig);
+
+            var environment = Environment;
+            var holdingSlot = environment?.GetHoldingSlot(laneIndex, activeOnly: true)
+                ?? environment?.GetHoldingSlot(laneIndex, activeOnly: false);
+            if (holdingSlot == null)
+            {
+                pig.ClearWaitingAnchor();
+                return;
+            }
+
+            var depthSpacing = ResolveDeckDepthSpacing();
+            var depthIndex = waitingLanes[laneIndex].Count - 1;
+            pig.AssignWaitingAnchor(
+                holdingSlot,
+                snapImmediately: true,
+                ResolveQueuedPigWorldOffset(holdingSlot, depthIndex, depthSpacing));
+            pig.SetQueued(true, snapImmediately: true);
+            pig.SetOnBelt(false);
+        }
+
         private void RestoreBorrowedTrayToStack(PigController pig)
         {
             if (pig == null || !pigsUsingTrayStack.Remove(pig))
@@ -1260,6 +1388,7 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
+            soundService?.PlayJump();
             CompleteTrayReturn();
         }
 
@@ -1281,13 +1410,37 @@ namespace PixelFlow.Runtime.Managers
 
         private sealed class ActiveTrayTransfer
         {
-            public ActiveTrayTransfer(Transform transform)
+            private readonly GameManagerTrayQueueCoordinator owner;
+
+            public ActiveTrayTransfer(
+                GameManagerTrayQueueCoordinator owner,
+                Transform transform,
+                Vector3 startPosition,
+                Vector3 endPosition,
+                bool incrementTrayCountOnComplete)
             {
+                this.owner = owner;
                 Transform = transform;
+                StartPosition = startPosition;
+                EndPosition = endPosition;
+                IncrementTrayCountOnComplete = incrementTrayCountOnComplete;
             }
 
             public Transform Transform { get; }
+            public Vector3 StartPosition { get; }
+            public Vector3 EndPosition { get; }
+            public bool IncrementTrayCountOnComplete { get; }
             public Tween Tween { get; set; }
+
+            public void Update(float t)
+            {
+                owner.UpdateTrayTransfer(this, t);
+            }
+
+            public void Complete()
+            {
+                owner.CompleteTrayTransfer(this);
+            }
 
             public void Stop()
             {

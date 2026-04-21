@@ -1,4 +1,5 @@
 using System;
+using PixelFlow.Runtime.Audio;
 using PixelFlow.Runtime.Levels;
 using UnityEngine;
 using VContainer.Unity;
@@ -11,16 +12,19 @@ namespace PixelFlow.Runtime.UI
 
         private readonly GameSceneHudView view;
         private readonly LevelSessionController levelSessionController;
+        private readonly ISoundService soundService;
 
         private LevelSessionController subscribedController;
         private float buttonsLockedUntilUnscaledTime;
 
         public GameSceneHudPresenter(
             GameSceneHudView view,
-            LevelSessionController levelSessionController)
+            LevelSessionController levelSessionController,
+            ISoundService soundService)
         {
             this.view = view;
             this.levelSessionController = levelSessionController;
+            this.soundService = soundService;
         }
 
         public void Initialize()
@@ -47,6 +51,7 @@ namespace PixelFlow.Runtime.UI
         {
             RefreshLevelText(currentLevelIndex);
             LockOutcomeButtonsTemporarily();
+            soundService?.PlayWin();
             view?.ShowWinState();
         }
 
@@ -54,6 +59,7 @@ namespace PixelFlow.Runtime.UI
         {
             RefreshLevelText(currentLevelIndex);
             buttonsLockedUntilUnscaledTime = 0f;
+            soundService?.PlayLose();
             view?.ShowLoseState();
         }
 
@@ -115,6 +121,7 @@ namespace PixelFlow.Runtime.UI
                 return;
             }
 
+            soundService?.PlayClick();
             levelSessionController.RestartCurrentLevel();
         }
 
@@ -125,6 +132,7 @@ namespace PixelFlow.Runtime.UI
                 return;
             }
 
+            soundService?.PlayClick();
             levelSessionController.LoadNextLevel();
         }
 

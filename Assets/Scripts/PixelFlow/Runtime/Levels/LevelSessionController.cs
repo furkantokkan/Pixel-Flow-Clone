@@ -32,6 +32,7 @@ namespace PixelFlow.Runtime.Levels
         private const string RuntimeBoardRootName = "__RuntimeBoardRoot";
         private const string RuntimeDeckRootName = "__RuntimeDeckRoot";
         private const float WinOutcomeDelaySeconds = 1f;
+        private const float OutcomeSafetyPollIntervalSeconds = 0.25f;
 
         [Header("Loading")]
         [SerializeField, FormerlySerializedAs("autoLoadFirstLevelOnStart")] private bool autoLoad = true;
@@ -40,6 +41,7 @@ namespace PixelFlow.Runtime.Levels
 
         private readonly List<BlockVisual> spawnedBlocks = new();
         private readonly List<PigController> spawnedPigs = new();
+        private readonly HashSet<PigController> observedOutcomePigs = new();
         private readonly LevelOutcomeEvaluator outcomeEvaluator = new();
 
         private GameSceneContext sceneContext;
@@ -55,6 +57,9 @@ namespace PixelFlow.Runtime.Levels
         private bool hasResolvedTargetBlock;
         private bool isWinPresentationPending;
         private float pendingWinReadyTime = -1f;
+        private bool outcomeEvaluationDirty = true;
+        private float nextOutcomeSafetyPollTime = -1f;
+        private bool hasSubscribedToGameManager;
 
         private static bool IsPlayModeActive => Application.isPlaying;
 
@@ -82,6 +87,7 @@ namespace PixelFlow.Runtime.Levels
             gameFactory = injectedGameFactory;
             visualPoolService = injectedVisualPoolService;
             levelDatabase = injectedLevelDatabase;
+            SubscribeToGameManagerEvents();
         }
 
         private void Update()
@@ -104,12 +110,14 @@ namespace PixelFlow.Runtime.Levels
                 return;
             }
 
-            EvaluateLevelOutcome();
+            EvaluateLevelOutcomeIfNeeded();
         }
 
         private void OnDestroy()
         {
             UnsubscribeFromSpawnedBlocks();
+            UnsubscribeFromOutcomePigs();
+            UnsubscribeFromGameManagerEvents();
         }
 
         private void OnDisable()
@@ -284,7 +292,12 @@ namespace PixelFlow.Runtime.Levels
                 return;
             }
 
-            if (LevelOutcomeEvaluator.HasPendingPigAction(spawnedPigs))
+            if (LevelOutcomeEvaluator.HasPendingPigAction(ResolveOutcomePigs()))
+            {
+                return;
+            }
+
+            if (ResolvePendingQueueEntries().Count > 0)
             {
                 return;
             }
@@ -351,9 +364,13 @@ namespace PixelFlow.Runtime.Levels
                 RegisterSpawnedContent(spawnResult);
 
                 gameManager?.Construct(environment);
-                gameManager?.InitializeWaitingLanes(spawnResult.WaitingLanes);
+                gameManager?.InitializeWaitingLanes(
+                    spawnResult.WaitingLanes,
+                    spawnResult.PendingLaneEntries,
+                    spawnResult.DeckRoot);
                 NotifyLevelChanged();
-                EvaluateLevelOutcome();
+                InvalidateOutcomeEvaluationCache();
+                EvaluateLevelOutcomeIfNeeded(force: true);
                 return true;
             }
             finally
@@ -422,8 +439,10 @@ namespace PixelFlow.Runtime.Levels
             SetBurstActive(false);
             hasResolvedTargetBlock = false;
             isWinPresentationPending = false;
+            InvalidateOutcomeEvaluationCache();
 
             UnsubscribeFromSpawnedBlocks();
+            UnsubscribeFromOutcomePigs();
             spawnedBlocks.Clear();
             spawnedPigs.Clear();
             pendingWinReadyTime = -1f;
@@ -438,6 +457,7 @@ namespace PixelFlow.Runtime.Levels
             {
                 if (spawnedBlocks[i] != null)
                 {
+                    spawnedBlocks[i].StateChanged -= HandleBlockStateChanged;
                     spawnedBlocks[i].Destroyed -= HandleBlockDestroyed;
                 }
             }
@@ -450,6 +470,7 @@ namespace PixelFlow.Runtime.Levels
                 boardRoot = null;
                 deckRoot = null;
                 RemainingTargetBlocks = 0;
+                InvalidateOutcomeEvaluationCache();
                 return;
             }
 
@@ -458,6 +479,7 @@ namespace PixelFlow.Runtime.Levels
             RemainingTargetBlocks = spawnResult.TargetBlocks != null
                 ? spawnResult.TargetBlocks.Count
                 : 0;
+            InvalidateOutcomeEvaluationCache();
 
             if (spawnResult.SpawnedBlocks != null)
             {
@@ -467,6 +489,10 @@ namespace PixelFlow.Runtime.Levels
             if (spawnResult.SpawnedPigs != null)
             {
                 spawnedPigs.AddRange(spawnResult.SpawnedPigs);
+                for (int i = 0; i < spawnResult.SpawnedPigs.Count; i++)
+                {
+                    SubscribeToOutcomePig(spawnResult.SpawnedPigs[i]);
+                }
             }
 
             if (spawnResult.TargetBlocks == null)
@@ -482,6 +508,8 @@ namespace PixelFlow.Runtime.Levels
                     continue;
                 }
 
+                block.StateChanged -= HandleBlockStateChanged;
+                block.StateChanged += HandleBlockStateChanged;
                 block.Destroyed -= HandleBlockDestroyed;
                 block.Destroyed += HandleBlockDestroyed;
             }
@@ -491,6 +519,7 @@ namespace PixelFlow.Runtime.Levels
         {
             if (block != null)
             {
+                block.StateChanged -= HandleBlockStateChanged;
                 block.Destroyed -= HandleBlockDestroyed;
             }
 
@@ -505,7 +534,60 @@ namespace PixelFlow.Runtime.Levels
                 BeginWinPresentation();
             }
 
+            InvalidateOutcomeEvaluationCache();
+            EvaluateLevelOutcomeIfNeeded(force: true);
+        }
+
+        private void HandleBlockStateChanged(BlockVisual _)
+        {
+            InvalidateOutcomeEvaluationCache();
+        }
+
+        private void EvaluateLevelOutcomeIfNeeded(bool force = false)
+        {
+            if (CurrentRunState != LevelRunState.Playing)
+            {
+                return;
+            }
+
+            if (!force && !ShouldEvaluateLevelOutcome())
+            {
+                return;
+            }
+
             EvaluateLevelOutcome();
+        }
+
+        private bool ShouldEvaluateLevelOutcome()
+        {
+            if (outcomeEvaluationDirty)
+            {
+                outcomeEvaluationDirty = false;
+                nextOutcomeSafetyPollTime = Application.isPlaying
+                    ? Time.unscaledTime + OutcomeSafetyPollIntervalSeconds
+                    : -1f;
+                return true;
+            }
+
+            if (!Application.isPlaying)
+            {
+                return false;
+            }
+
+            if (nextOutcomeSafetyPollTime >= 0f
+                && Time.unscaledTime < nextOutcomeSafetyPollTime)
+            {
+                return false;
+            }
+
+            nextOutcomeSafetyPollTime = Time.unscaledTime + OutcomeSafetyPollIntervalSeconds;
+            return true;
+        }
+
+        private void InvalidateOutcomeEvaluationCache()
+        {
+            outcomeEvaluationDirty = true;
+            nextOutcomeSafetyPollTime = -1f;
         }
 
         private void EvaluateLevelOutcome()
@@ -521,7 +603,8 @@ namespace PixelFlow.Runtime.Levels
                 IsHoldingContainerFilled(),
                 hasResolvedTargetBlock,
                 spawnedBlocks,
-                spawnedPigs))
+                ResolveOutcomePigs(),
+                ResolvePendingQueueEntries()))
             {
                 case LevelOutcomeDecision.Win:
                     BeginWinPresentation();
@@ -564,6 +647,7 @@ namespace PixelFlow.Runtime.Levels
             SetBurstActive(false);
             isWinPresentationPending = false;
             pendingWinReadyTime = -1f;
+            InvalidateOutcomeEvaluationCache();
             LevelLost?.Invoke(CurrentLevelIndex);
         }
 
@@ -578,11 +662,14 @@ namespace PixelFlow.Runtime.Levels
             CurrentLevelIndex = -1;
             CurrentRunState = LevelRunState.None;
             RemainingTargetBlocks = 0;
+            nextOutcomeSafetyPollTime = -1f;
+            InvalidateOutcomeEvaluationCache();
         }
 
         private void SetBurstActive(bool active)
         {
             isBurstActive = active;
+            InvalidateOutcomeEvaluationCache();
             gameManager?.SetBurstModeActive(active);
         }
 
@@ -591,6 +678,8 @@ namespace PixelFlow.Runtime.Levels
             ResetRuntimeState();
             boardRoot = null;
             deckRoot = null;
+            UnsubscribeFromSpawnedBlocks();
+            UnsubscribeFromOutcomePigs();
             spawnedBlocks.Clear();
             spawnedPigs.Clear();
         }
@@ -615,6 +704,7 @@ namespace PixelFlow.Runtime.Levels
             pendingWinReadyTime = Application.isPlaying
                 ? Time.unscaledTime + WinOutcomeDelaySeconds
                 : 0f;
+            InvalidateOutcomeEvaluationCache();
         }
 
         private void TryPresentPendingWin()
@@ -625,13 +715,130 @@ namespace PixelFlow.Runtime.Levels
             }
 
             if (LevelOutcomeEvaluator.HasPendingTargetResolution(spawnedBlocks)
-                || LevelOutcomeEvaluator.HasPendingPigAction(spawnedPigs)
+                || LevelOutcomeEvaluator.HasPendingPigAction(ResolveOutcomePigs())
                 || !IsWinPresentationReady())
             {
                 return;
             }
 
             CompleteCurrentLevel();
+        }
+
+        private IReadOnlyList<PigController> ResolveOutcomePigs()
+        {
+            return Application.isPlaying && gameManager != null
+                ? gameManager.TrackedPigs
+                : spawnedPigs;
+        }
+
+        private IReadOnlyList<PigQueueEntry> ResolvePendingQueueEntries()
+        {
+            return Application.isPlaying && gameManager != null
+                ? gameManager.PendingQueueEntries
+                : Array.Empty<PigQueueEntry>();
+        }
+
+        private void SubscribeToGameManagerEvents()
+        {
+            if (gameManager == null || hasSubscribedToGameManager)
+            {
+                return;
+            }
+
+            gameManager.OutcomeStateChanged += HandleGameManagerOutcomeStateChanged;
+            gameManager.TrackedPigRegistered += HandleTrackedPigRegistered;
+            gameManager.TrackedPigUnregistered += HandleTrackedPigUnregistered;
+            hasSubscribedToGameManager = true;
+            SubscribeToCurrentOutcomePigs();
+        }
+
+        private void UnsubscribeFromGameManagerEvents()
+        {
+            if (gameManager == null || !hasSubscribedToGameManager)
+            {
+                return;
+            }
+
+            gameManager.OutcomeStateChanged -= HandleGameManagerOutcomeStateChanged;
+            gameManager.TrackedPigRegistered -= HandleTrackedPigRegistered;
+            gameManager.TrackedPigUnregistered -= HandleTrackedPigUnregistered;
+            hasSubscribedToGameManager = false;
+        }
+
+        private void HandleGameManagerOutcomeStateChanged()
+        {
+            SubscribeToCurrentOutcomePigs();
+            InvalidateOutcomeEvaluationCache();
+        }
+
+        private void HandleTrackedPigRegistered(PigController pig)
+        {
+            SubscribeToOutcomePig(pig);
+            InvalidateOutcomeEvaluationCache();
+        }
+
+        private void HandleTrackedPigUnregistered(PigController pig)
+        {
+            UnsubscribeFromOutcomePig(pig);
+            InvalidateOutcomeEvaluationCache();
+        }
+
+        private void HandlePigOutcomeChanged(PigController _)
+        {
+            InvalidateOutcomeEvaluationCache();
+        }
+
+        private void SubscribeToCurrentOutcomePigs()
+        {
+            var pigs = ResolveOutcomePigs();
+            if (pigs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < pigs.Count; i++)
+            {
+                SubscribeToOutcomePig(pigs[i]);
+            }
+        }
+
+        private void SubscribeToOutcomePig(PigController pig)
+        {
+            if (pig == null || !observedOutcomePigs.Add(pig))
+            {
+                return;
+            }
+
+            pig.OutcomeChanged -= HandlePigOutcomeChanged;
+            pig.OutcomeChanged += HandlePigOutcomeChanged;
+        }
+
+        private void UnsubscribeFromOutcomePig(PigController pig)
+        {
+            if (pig == null || !observedOutcomePigs.Remove(pig))
+            {
+                return;
+            }
+
+            pig.OutcomeChanged -= HandlePigOutcomeChanged;
+        }
+
+        private void UnsubscribeFromOutcomePigs()
+        {
+            if (observedOutcomePigs.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pig in observedOutcomePigs)
+            {
+                if (pig != null)
+                {
+                    pig.OutcomeChanged -= HandlePigOutcomeChanged;
+                }
+            }
+
+            observedOutcomePigs.Clear();
         }
 
         private void ResolveEditorOnlyDependencies()
@@ -643,12 +850,14 @@ namespace PixelFlow.Runtime.Levels
 
             sceneContext ??= GetComponent<GameSceneContext>();
             gameManager ??= GetComponent<GameManager>();
+            SubscribeToGameManagerEvents();
             if (sceneContext == null)
             {
                 return;
             }
 
             gameManager ??= sceneContext.GameManager;
+            SubscribeToGameManagerEvents();
             gameFactory ??= sceneContext.GameFactory;
             visualPoolService ??= sceneContext.VisualPoolService;
             levelDatabase ??= ResolveEditorLevelDatabase();
@@ -688,12 +897,14 @@ namespace PixelFlow.Runtime.Levels
 
             sceneContext ??= GetComponent<GameSceneContext>();
             gameManager ??= GetComponent<GameManager>();
+            SubscribeToGameManagerEvents();
             if (sceneContext == null)
             {
                 return;
             }
 
             gameManager ??= sceneContext.GameManager;
+            SubscribeToGameManagerEvents();
             gameFactory ??= sceneContext.GameFactory;
             visualPoolService ??= sceneContext.VisualPoolService;
             levelDatabase ??= ResolveRuntimeLevelDatabase(sceneContext);

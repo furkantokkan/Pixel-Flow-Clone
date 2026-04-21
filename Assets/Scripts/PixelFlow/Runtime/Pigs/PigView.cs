@@ -1,5 +1,6 @@
 using System;
 using TMPro;
+using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Visuals;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -13,6 +14,7 @@ namespace PixelFlow.Runtime.Pigs
     {
         private static readonly Quaternion QueueFacingOffset = Quaternion.Euler(0f, 180f, 0f);
         private static readonly Quaternion BeltFacingOffset = Quaternion.identity;
+        private static readonly Color DarkAmmoTextColor = new(0.1f, 0.1f, 0.1f);
 
         [SerializeField] private AtlasColorTarget atlasColorTarget;
         [SerializeField] private TMP_Text ammoText;
@@ -59,12 +61,14 @@ namespace PixelFlow.Runtime.Pigs
         {
             EnsureReferences();
             atlasColorTarget?.SetColor(model.Color);
+            atlasColorTarget?.SetOutline(model.TrayVisible);
 
             if (ammoText != null)
             {
                 ammoText.text = model.Ammo > 0
                     ? model.Ammo.ToString()
                     : string.Empty;
+                ammoText.color = ResolveAmmoTextColor(model.Color);
             }
 
             if (trayRoot != null)
@@ -520,6 +524,15 @@ namespace PixelFlow.Runtime.Pigs
                 && candidate != null
                 && candidate != trayRoot
                 && candidate.IsChildOf(trayRoot);
+        }
+
+        private static Color ResolveAmmoTextColor(PigColor pigColor)
+        {
+            var backgroundColor = PigColorPaletteUtility.GetAtlasPreviewColor(pigColor);
+            var luminance = (0.299f * backgroundColor.r) + (0.587f * backgroundColor.g) + (0.114f * backgroundColor.b);
+            return luminance > 0.58f
+                ? DarkAmmoTextColor
+                : Color.white;
         }
     }
 }

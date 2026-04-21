@@ -68,13 +68,17 @@ namespace PixelFlow.Runtime.Pigs
         private Sequence beltDepleteTween;
         private Vector3 dispatchStartPosition;
         private Vector3 dispatchEndPosition;
+        private Vector3 dispatchMidpoint;
         private Quaternion dispatchStartRotation;
         private Quaternion dispatchEndRotation;
+        private float dispatchFirstHalfDuration;
+        private float dispatchSecondHalfDuration;
         private SplineComputer pendingDispatchSpline;
         private Transform pendingDispatchOrbitTarget;
         private double pendingDispatchStartPercent;
         private double pendingDispatchEndPercent = 1.0;
         private float pendingDispatchFollowSpeed = -1f;
+        private Vector3 beltDepleteEndEuler;
         private SplineComputer activeLoopSpline;
         private Transform activeLoopOrbitTarget;
         private double activeLoopStartPercent;
@@ -84,8 +88,10 @@ namespace PixelFlow.Runtime.Pigs
 
         public event Action<PigController> Fired;
         public event Action<PigController> ConveyorLoopCompleted;
+        public event Action<PigController> DispatchToBeltCompleted;
         public event Action<PigController> ReturnedToWaiting;
         public event Action<PigController> BeltDepleteCompleted;
+        public event Action<PigController> OutcomeChanged;
 
         public PigColor Color => model.Color;
         public int Ammo => model.Ammo;
@@ -209,15 +215,17 @@ namespace PixelFlow.Runtime.Pigs
             followSpeedMultiplier = 1f;
             fireIntervalMultiplier = 1f;
             firedDuringCurrentCycle = false;
-            State = PigState.Idle;
+            SetState(PigState.Idle);
             view?.SetRenderersVisible(true);
             Render();
+            NotifyOutcomeChanged();
         }
 
         public void SetAmmo(int ammo)
         {
             model.SetAmmo(ammo);
             Render();
+            NotifyOutcomeChanged();
         }
 
         public void SetDirection(PigDirection direction)
@@ -255,7 +263,7 @@ namespace PixelFlow.Runtime.Pigs
             if (snapImmediately)
             {
                 SnapToWaitingAnchor();
-                State = model.Queued ? PigState.Queued : PigState.Idle;
+                SetState(model.Queued ? PigState.Queued : PigState.Idle);
             }
         }
 
@@ -272,7 +280,7 @@ namespace PixelFlow.Runtime.Pigs
             {
                 StopDispatchTween();
                 StopSplineFollowing();
-                State = PigState.Queued;
+                SetState(PigState.Queued);
                 if (snapImmediately)
                 {
                     SnapToWaitingAnchor();
@@ -280,7 +288,7 @@ namespace PixelFlow.Runtime.Pigs
             }
             else if (State == PigState.Queued)
             {
-                State = PigState.Idle;
+                SetState(PigState.Idle);
             }
         }
 
@@ -317,7 +325,7 @@ namespace PixelFlow.Runtime.Pigs
             activeDispatchJumpHeight = Mathf.Max(0f, dispatchJumpHeight);
             beltShotCooldown = 0f;
             firedDuringCurrentCycle = false;
-            State = PigState.DispatchingToBelt;
+            SetState(PigState.DispatchingToBelt);
             SetOnBelt(false);
             view?.SetBeltFacingMode(true);
             Render();
@@ -332,19 +340,18 @@ namespace PixelFlow.Runtime.Pigs
             }
 
             var peakHeight = Mathf.Max(dispatchStartPosition.y, dispatchEndPosition.y) + activeDispatchJumpHeight;
-            var midpoint = Vector3.Lerp(dispatchStartPosition, dispatchEndPosition, 0.5f);
-            midpoint.y = peakHeight;
-
-            var firstHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration * 0.5f);
-            var secondHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration - firstHalfDuration);
+            dispatchMidpoint = Vector3.Lerp(dispatchStartPosition, dispatchEndPosition, 0.5f);
+            dispatchMidpoint.y = peakHeight;
+            dispatchFirstHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration * 0.5f);
+            dispatchSecondHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration - dispatchFirstHalfDuration);
             dispatchTween = Tween.Custom(
                     this,
                     0f,
                     resolvedDispatchDuration,
                     resolvedDispatchDuration,
-                    (target, elapsed) => target.UpdateDispatchTween(midpoint, firstHalfDuration, secondHalfDuration, elapsed),
+                    static (target, elapsed) => target.UpdateDispatchTween(elapsed),
                     Ease.Linear)
-                .OnComplete(this, target => target.CompleteDispatchTween());
+                .OnComplete(this, static target => target.CompleteDispatchTween());
         }
 
         public bool TryConsumeAmmo(int amount = 1)
@@ -353,6 +360,7 @@ namespace PixelFlow.Runtime.Pigs
             if (consumed)
             {
                 Render();
+                NotifyOutcomeChanged();
             }
 
             return consumed;
@@ -408,7 +416,7 @@ namespace PixelFlow.Runtime.Pigs
             activeBeltFacingYawOffset = ResolveBeltFacingYawOffset(orbitAround, currentSplineStartPercent);
             splineFollower.Restart(currentSplineStartPercent);
             splineFollower.follow = true;
-            State = PigState.FollowingSpline;
+            SetState(PigState.FollowingSpline);
             SetOnBelt(true);
             ApplyBeltFacingFromSpline();
             Render();
@@ -424,7 +432,7 @@ namespace PixelFlow.Runtime.Pigs
             orbitTarget = orbitAround;
             stateTimer = orbitDuration;
             firedDuringCurrentCycle = false;
-            State = PigState.OrbitingTarget;
+            SetState(PigState.OrbitingTarget);
         }
 
         public void ReturnToWaiting()
@@ -434,9 +442,9 @@ namespace PixelFlow.Runtime.Pigs
             StopSplineFollowing();
             beltShotCooldown = 0f;
             stateTimer = 0f;
-            State = waitingAnchor != null
+            SetState(waitingAnchor != null
                 ? PigState.ReturningToWaiting
-                : PigState.Idle;
+                : PigState.Idle);
             SetOnBelt(false);
         }
 
@@ -448,7 +456,7 @@ namespace PixelFlow.Runtime.Pigs
             beltShotCooldown = 0f;
             stateTimer = 0f;
             orbitTarget = null;
-            State = PigState.DespawningOnBelt;
+            SetState(PigState.DespawningOnBelt);
             SetOnBelt(true);
             Render();
 
@@ -519,34 +527,35 @@ namespace PixelFlow.Runtime.Pigs
             ResetPendingDispatchState();
 
             FollowSpline(spline, startPercent, endPercent, followSpeed, orbitAround);
+            DispatchToBeltCompleted?.Invoke(this);
         }
 
         private void UpdateDispatching()
         {
         }
 
-        private void UpdateDispatchTween(
-            Vector3 midpoint,
-            float firstHalfDuration,
-            float secondHalfDuration,
-            float elapsed)
+        private void UpdateDispatchTween(float elapsed)
         {
             elapsed = Mathf.Max(0f, elapsed);
             Vector3 currentPosition;
             Vector3 lookTarget;
-            if (elapsed <= firstHalfDuration)
+            if (elapsed <= dispatchFirstHalfDuration)
             {
-                var firstHalfT = firstHalfDuration <= 0.0001f ? 1f : Mathf.Clamp01(elapsed / firstHalfDuration);
+                var firstHalfT = dispatchFirstHalfDuration <= 0.0001f
+                    ? 1f
+                    : Mathf.Clamp01(elapsed / dispatchFirstHalfDuration);
                 var easedFirstHalfT = 1f - ((1f - firstHalfT) * (1f - firstHalfT));
-                currentPosition = Vector3.LerpUnclamped(dispatchStartPosition, midpoint, easedFirstHalfT);
-                lookTarget = firstHalfT < 0.98f ? midpoint : dispatchEndPosition;
+                currentPosition = Vector3.LerpUnclamped(dispatchStartPosition, dispatchMidpoint, easedFirstHalfT);
+                lookTarget = firstHalfT < 0.98f ? dispatchMidpoint : dispatchEndPosition;
             }
             else
             {
-                var secondHalfElapsed = elapsed - firstHalfDuration;
-                var secondHalfT = secondHalfDuration <= 0.0001f ? 1f : Mathf.Clamp01(secondHalfElapsed / secondHalfDuration);
+                var secondHalfElapsed = elapsed - dispatchFirstHalfDuration;
+                var secondHalfT = dispatchSecondHalfDuration <= 0.0001f
+                    ? 1f
+                    : Mathf.Clamp01(secondHalfElapsed / dispatchSecondHalfDuration);
                 var easedSecondHalfT = secondHalfT * secondHalfT;
-                currentPosition = Vector3.LerpUnclamped(midpoint, dispatchEndPosition, easedSecondHalfT);
+                currentPosition = Vector3.LerpUnclamped(dispatchMidpoint, dispatchEndPosition, easedSecondHalfT);
                 lookTarget = dispatchEndPosition;
             }
 
@@ -577,7 +586,7 @@ namespace PixelFlow.Runtime.Pigs
         {
             StopSplineFollowing();
             beltShotCooldown = 0f;
-            State = PigState.Idle;
+            SetState(PigState.Idle);
             SetOnBelt(false);
             ConveyorLoopCompleted?.Invoke(this);
         }
@@ -642,16 +651,16 @@ namespace PixelFlow.Runtime.Pigs
         {
             stateTimer = fireDuration;
             firedDuringCurrentCycle = false;
-            State = PigState.Firing;
+            SetState(PigState.Firing);
         }
 
         private void MoveTowardsWaitingAnchor(float moveSpeed, PigState completedState)
         {
             if (waitingAnchor == null)
             {
-                State = completedState == PigState.Queued
+                SetState(completedState == PigState.Queued
                     ? PigState.Idle
-                    : completedState;
+                    : completedState);
                 return;
             }
 
@@ -663,7 +672,7 @@ namespace PixelFlow.Runtime.Pigs
             {
                 if (State != completedState)
                 {
-                    State = completedState;
+                    SetState(completedState);
                     if (completedState == PigState.Queued)
                     {
                         ReturnedToWaiting?.Invoke(this);
@@ -760,26 +769,20 @@ namespace PixelFlow.Runtime.Pigs
             float popDuration,
             float shrinkDuration)
         {
-            var endEuler = startEuler + new Vector3(0f, beltDepleteSpinDegrees, 0f);
+            beltDepleteEndEuler = startEuler + new Vector3(0f, beltDepleteSpinDegrees, 0f);
             var scaleTween = Tween.Scale(transform, overshootScale, popDuration, Ease.OutQuad)
                 .Chain(Tween.Scale(transform, Vector3.zero, shrinkDuration, Ease.OutCubic));
             var spinTween = Tween.LocalEulerAngles(
                 transform,
                 startEuler,
-                endEuler,
+                beltDepleteEndEuler,
                 totalDuration,
                 Ease.OutCubic);
 
             beltDepleteTween = Sequence.Create()
                 .Group(scaleTween)
                 .Group(spinTween)
-                .ChainCallback(this, target =>
-                {
-                    target.beltDepleteTween = default;
-                    target.transform.localScale = Vector3.zero;
-                    target.transform.localRotation = Quaternion.Euler(endEuler);
-                    target.CompleteBeltDeplete();
-                });
+                .ChainCallback(this, static target => target.CompleteBeltDepleteTween());
         }
 
         private void StopBeltDepleteSequence()
@@ -798,6 +801,14 @@ namespace PixelFlow.Runtime.Pigs
             BeltDepleteCompleted?.Invoke(this);
         }
 
+        private void CompleteBeltDepleteTween()
+        {
+            beltDepleteTween = default;
+            transform.localScale = Vector3.zero;
+            transform.localRotation = Quaternion.Euler(beltDepleteEndEuler);
+            CompleteBeltDeplete();
+        }
+
         private void ResetPendingDispatchState()
         {
             pendingDispatchSpline = null;
@@ -806,6 +817,9 @@ namespace PixelFlow.Runtime.Pigs
             pendingDispatchEndPercent = 1.0;
             pendingDispatchFollowSpeed = -1f;
             activeDispatchJumpHeight = 0f;
+            dispatchMidpoint = Vector3.zero;
+            dispatchFirstHalfDuration = 0f;
+            dispatchSecondHalfDuration = 0f;
         }
 
         private void ClearRuntimeState()
@@ -827,7 +841,7 @@ namespace PixelFlow.Runtime.Pigs
             activeLoopOrbitTarget = null;
             activeLoopStartPercent = 0.0;
             activeLoopEndPercent = 1.0;
-            State = PigState.Idle;
+            SetState(PigState.Idle);
             model.Reset();
 
             if (clearViewOnDespawn)
@@ -838,12 +852,30 @@ namespace PixelFlow.Runtime.Pigs
             {
                 Render();
             }
+
+            NotifyOutcomeChanged();
         }
 
         private void Render()
         {
             EnsureReferences();
             view?.Render(model);
+        }
+
+        private void SetState(PigState state)
+        {
+            if (State == state)
+            {
+                return;
+            }
+
+            State = state;
+            NotifyOutcomeChanged();
+        }
+
+        private void NotifyOutcomeChanged()
+        {
+            OutcomeChanged?.Invoke(this);
         }
 
         private void EnsureReferences()

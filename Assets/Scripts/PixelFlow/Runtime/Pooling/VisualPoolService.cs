@@ -11,6 +11,8 @@ namespace PixelFlow.Runtime.Pooling
 {
     public sealed class VisualPoolService : IVisualPoolService, IDisposable
     {
+        private const int MinimumPigPrewarmCount = 35;
+
         private readonly GameSceneContext sceneContext;
         private readonly PigController pigPrefab;
         private readonly BlockVisual blockPrefab;
@@ -38,7 +40,9 @@ namespace PixelFlow.Runtime.Pooling
             pigPrefab = settings != null ? settings.PigPrefab : null;
             blockPrefab = settings != null ? settings.BlockPrefab : null;
             bulletPrefab = settings != null ? settings.BulletPrefab : null;
-            pigPrewarmCount = settings != null ? Mathf.Max(0, settings.PigPrewarmCount) : 0;
+            pigPrewarmCount = settings != null
+                ? Mathf.Max(MinimumPigPrewarmCount, settings.PigPrewarmCount)
+                : MinimumPigPrewarmCount;
             blockPrewarmCount = settings != null ? Mathf.Max(0, settings.BlockPrewarmCount) : 0;
             bulletPrewarmCount = settings != null ? Mathf.Max(0, settings.BulletPrewarmCount) : 0;
             pigMaxSize = settings != null ? Mathf.Max(1, settings.PigMaxSize) : 1;

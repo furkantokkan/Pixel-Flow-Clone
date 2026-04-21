@@ -5,12 +5,14 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using Dreamteck.Splines;
 using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Factories;
 using PixelFlow.Runtime.LevelEditing;
 using PixelFlow.Runtime.Levels;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Tray;
 using PixelFlow.Runtime.Visuals;
+using PrimeTween;
 using UnityEngine;
 using UnityEngine.Serialization;
 using VContainer;
@@ -21,9 +23,11 @@ namespace PixelFlow.Runtime.Managers
     public sealed class GameManager : MonoBehaviour
     {
         private static int playSessionVersion;
+        private static bool primeTweenCapacityConfigured;
         private const float QueuedPigVerticalOffset = 0.6f;
         private const float TargetSelectionEpsilon = 0.0001f;
         private const float DispatchEntryClearanceDistance = 1.25f;
+        private const int PrimeTweenTweensCapacity = 2048;
 
         private float dispatchFollowSpeed = 7f;
         private float traySendDuration = 0.45f;
@@ -45,6 +49,7 @@ namespace PixelFlow.Runtime.Managers
         private readonly List<TrayController> trayStackVisuals = new();
         private readonly HashSet<PigController> pigsUsingTrayStack = new();
         private readonly List<List<PigController>> waitingLanes = new();
+        private readonly List<PigController> trackedPigs = new();
         private readonly Dictionary<PigController, int> pigLaneLookup = new();
         private readonly Dictionary<PigController, int> pigHoldingLookup = new();
         private readonly List<PigController> activeConveyorPigs = new();
@@ -61,12 +66,20 @@ namespace PixelFlow.Runtime.Managers
         private PigRendererVisibilityCoordinator pigRendererVisibilityCoordinator;
         private int observedPlaySessionVersion = -1;
         private CancellationTokenSource dispatchWarmupCts;
+        private Transform runtimeDeckRoot;
 
         public IReadOnlyList<PigController> QueuedPigs => queuedPigs;
+        public IReadOnlyList<PigController> TrackedPigs => trackedPigs;
+        public IReadOnlyList<PigQueueEntry> PendingQueueEntries => trayQueueCoordinator != null
+            ? trayQueueCoordinator.PendingQueueEntries
+            : Array.Empty<PigQueueEntry>();
         public int QueueCount => queuedPigs.Count;
         public int QueueCapacity => environment != null ? environment.ActiveHoldingContainerCount : 0;
         public int HoldingPigCount => trayQueueCoordinator != null ? trayQueueCoordinator.HoldingPigCount : 0;
         public bool IsHoldingContainerFull => QueueCapacity > 0 && HoldingPigCount >= QueueCapacity;
+        public event Action OutcomeStateChanged;
+        public event Action<PigController> TrackedPigRegistered;
+        public event Action<PigController> TrackedPigUnregistered;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -152,6 +165,7 @@ namespace PixelFlow.Runtime.Managers
 
         public void Construct(EnvironmentContext resolvedEnvironment)
         {
+            EnsurePrimeTweenCapacity();
             environment = resolvedEnvironment;
             if (environment != null)
             {
@@ -170,8 +184,18 @@ namespace PixelFlow.Runtime.Managers
 
         public void InitializeWaitingLanes(IReadOnlyList<List<PigController>> lanes)
         {
+            InitializeWaitingLanes(lanes, null, null);
+        }
+
+        public void InitializeWaitingLanes(
+            IReadOnlyList<List<PigController>> lanes,
+            IReadOnlyList<List<PigQueueEntry>> pendingLaneEntries,
+            Transform deckRoot)
+        {
             EnsureGameplayCollaborators();
-            trayQueueCoordinator?.InitializeWaitingLanes(lanes);
+            runtimeDeckRoot = deckRoot;
+            trayQueueCoordinator?.InitializeWaitingLanes(lanes, pendingLaneEntries);
+            RebuildTrackedPigRegistry();
             ScheduleDispatchWarmup();
         }
 
@@ -265,8 +289,6 @@ namespace PixelFlow.Runtime.Managers
                 dispatchFollowSpeed,
                 environment.BlockContainer,
                 dispatchDurationOverride: traySendDuration);
-
-            RefreshQueueVisuals();
             return true;
         }
 
@@ -289,11 +311,14 @@ namespace PixelFlow.Runtime.Managers
             EnsureGameplayCollaborators();
             trayQueueCoordinator?.ClearQueue();
             targetingCoordinator?.Clear();
+            ClearTrackedPigRegistry();
+            runtimeDeckRoot = null;
         }
 
         private void RefreshQueueVisuals(bool snapWaitingPigs = false)
         {
             trayQueueCoordinator?.RefreshQueueVisuals(snapWaitingPigs);
+            NotifyOutcomeStateChanged();
         }
 
         private Vector3 ResolveTrayEquipPosition()
@@ -664,6 +689,9 @@ namespace PixelFlow.Runtime.Managers
                     () => QueueCapacity,
                     () => ResolveLevelSessionController()?.ForceLevelFail(),
                     TryDispatchBurstPigs,
+                    NotifyOutcomeStateChanged,
+                    UnregisterTrackedPig,
+                    SpawnPendingQueuedPig,
                     ResolveTrayEquipPosition,
                     ignoreTrayAvailability => DispatchNextPigToSpline(ignoreTrayAvailability),
                     gameObject,
@@ -712,6 +740,8 @@ namespace PixelFlow.Runtime.Managers
             ResetBurstMode();
             environment = null;
             dispatchSpline = null;
+            runtimeDeckRoot = null;
+            ClearTrackedPigRegistry();
 
             ClearQueue();
             sceneContext?.ResetRuntimeSessionState();
@@ -767,8 +797,10 @@ namespace PixelFlow.Runtime.Managers
         {
             try
             {
-                await UniTask.NextFrame(cancellationToken: cancellationToken);
-                await UniTask.NextFrame(cancellationToken: cancellationToken);
+                await UniTask.Yield();
+                cancellationToken.ThrowIfCancellationRequested();
+                await UniTask.Yield();
+                cancellationToken.ThrowIfCancellationRequested();
 
                 EnsureGameplayCollaborators();
                 trayQueueCoordinator?.PrewarmDispatchRuntime();
@@ -805,6 +837,133 @@ namespace PixelFlow.Runtime.Managers
         private void WarmupTweenDispatchPath()
         {
             Tween.Custom(this, 0f, 1f, 0.0001f, static (_, _) => { }, Ease.Linear);
+        }
+
+        private static void EnsurePrimeTweenCapacity()
+        {
+            if (primeTweenCapacityConfigured)
+            {
+                return;
+            }
+
+            PrimeTweenConfig.SetTweensCapacity(PrimeTweenTweensCapacity);
+            primeTweenCapacityConfigured = true;
+        }
+
+        private void RegisterTrackedPig(PigController pig)
+        {
+            if (pig == null || trackedPigs.Contains(pig))
+            {
+                return;
+            }
+
+            trackedPigs.Add(pig);
+            TrackedPigRegistered?.Invoke(pig);
+            NotifyOutcomeStateChanged();
+        }
+
+        private void UnregisterTrackedPig(PigController pig)
+        {
+            if (pig == null)
+            {
+                return;
+            }
+
+            if (!trackedPigs.Remove(pig))
+            {
+                return;
+            }
+
+            TrackedPigUnregistered?.Invoke(pig);
+            NotifyOutcomeStateChanged();
+        }
+
+        private void RebuildTrackedPigRegistry()
+        {
+            ClearTrackedPigRegistry();
+            for (var laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
+            {
+                var lane = waitingLanes[laneIndex];
+                if (lane == null)
+                {
+                    continue;
+                }
+
+                for (var pigIndex = 0; pigIndex < lane.Count; pigIndex++)
+                {
+                    RegisterTrackedPig(lane[pigIndex]);
+                }
+            }
+
+            for (var slotIndex = 0; slotIndex < holdingPigs.Count; slotIndex++)
+            {
+                RegisterTrackedPig(holdingPigs[slotIndex]);
+            }
+
+            for (var pigIndex = 0; pigIndex < activeConveyorPigs.Count; pigIndex++)
+            {
+                RegisterTrackedPig(activeConveyorPigs[pigIndex]);
+            }
+        }
+
+        private PigController SpawnPendingQueuedPig(PigQueueEntry entry, int laneIndex)
+        {
+            if (gameFactory == null)
+            {
+                return null;
+            }
+
+            var parent = runtimeDeckRoot != null
+                ? runtimeDeckRoot
+                : environment != null
+                    ? environment.DeckContainer != null
+                        ? environment.DeckContainer
+                        : environment.transform
+                    : null;
+            var pig = gameFactory.CreatePig(new PigSpawnRequest(
+                entry.Color,
+                entry.Ammo,
+                entry.Direction,
+                new VisualSpawnPlacement(
+                    parent: parent,
+                    position: Vector3.zero,
+                    rotation: Quaternion.identity)));
+            if (pig == null)
+            {
+                return null;
+            }
+
+            pig.name = $"Pig_Runtime_{laneIndex + 1}_{entry.Color}_{entry.Ammo}";
+            pig.SetOnBelt(false);
+            pig.SetTrayVisible(false);
+            pig.PrewarmDispatchRuntime();
+            RegisterTrackedPig(pig);
+            return pig;
+        }
+
+        private void ClearTrackedPigRegistry()
+        {
+            if (trackedPigs.Count == 0)
+            {
+                return;
+            }
+
+            for (var pigIndex = trackedPigs.Count - 1; pigIndex >= 0; pigIndex--)
+            {
+                var pig = trackedPigs[pigIndex];
+                trackedPigs.RemoveAt(pigIndex);
+                if (pig != null)
+                {
+                    TrackedPigUnregistered?.Invoke(pig);
+                }
+            }
+
+            NotifyOutcomeStateChanged();
+        }
+
+        private void NotifyOutcomeStateChanged()
+        {
+            OutcomeStateChanged?.Invoke();
         }
     }
 }

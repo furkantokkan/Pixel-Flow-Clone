@@ -1,4 +1,6 @@
 using System;
+using PixelFlow.Runtime.Audio;
+using PixelFlow.Runtime.Data;
 using System.Collections.Generic;
 using PixelFlow.Runtime.Factories;
 using PixelFlow.Runtime.LevelEditing;
@@ -12,10 +14,12 @@ namespace PixelFlow.Runtime.Managers
     internal sealed class GameManagerCollaboratorFactory
     {
         private readonly IGameFactory gameFactory;
+        private readonly ISoundService soundService;
 
-        public GameManagerCollaboratorFactory(IGameFactory gameFactory)
+        public GameManagerCollaboratorFactory(IGameFactory gameFactory, ISoundService soundService)
         {
             this.gameFactory = gameFactory;
+            this.soundService = soundService;
         }
 
         internal GameManagerCollaborators Create(
@@ -31,12 +35,15 @@ namespace PixelFlow.Runtime.Managers
             Func<int> queueCapacityProvider,
             Action triggerLevelFail,
             Action tryDispatchBurstPigs,
+            Action outcomeStateChanged,
+            Action<PigController> unregisterTrackedPig,
+            Func<PigQueueEntry, int, PigController> spawnPendingPig,
             Func<Vector3> resolveTrayEquipPosition,
             Func<bool, PigController> dispatchNextPig,
             GameObject owner,
             Func<Camera> gameplayCameraProvider)
         {
-            var targetingCoordinator = new GameManagerTargetingCoordinator(activeConveyorPigs);
+            var targetingCoordinator = new GameManagerTargetingCoordinator(activeConveyorPigs, soundService);
             GameManagerBurstCoordinator burstCoordinator = null;
 
             var trayQueueCoordinator = new GameManagerTrayQueueCoordinator(
@@ -52,10 +59,17 @@ namespace PixelFlow.Runtime.Managers
                 () => targetingCoordinator.ActiveConveyorPigs,
                 targetingCoordinator.RegisterConveyorPig,
                 targetingCoordinator.UnregisterConveyorPig,
-                pig => gameFactory?.ReleasePig(pig),
+                pig =>
+                {
+                    unregisterTrackedPig?.Invoke(pig);
+                    gameFactory?.ReleasePig(pig);
+                },
                 triggerLevelFail,
                 tryDispatchBurstPigs,
-                resolveTrayEquipPosition);
+                outcomeStateChanged,
+                spawnPendingPig,
+                resolveTrayEquipPosition,
+                soundService);
 
             var visibilityCoordinator = new PigRendererVisibilityCoordinator(owner, gameplayCameraProvider);
             burstCoordinator = new GameManagerBurstCoordinator(

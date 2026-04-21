@@ -1,3 +1,4 @@
+using PixelFlow.Runtime.Audio;
 using PixelFlow.Runtime.Data;
 using UnityEngine;
 using VContainer;
@@ -102,6 +103,7 @@ namespace PixelFlow.Runtime.Composition
         protected override void Configure(IContainerBuilder builder)
         {
             PrepareRegistrations();
+            builder.RegisterEntryPoint<SoundService>(Lifetime.Singleton);
 
             if (themeDatabase != null)
             {

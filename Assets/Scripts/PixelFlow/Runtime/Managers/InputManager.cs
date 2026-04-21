@@ -1,10 +1,9 @@
 using PixelFlow.Runtime.Pigs;
+using PixelFlow.Runtime.Audio;
 using PixelFlow.Runtime.Composition;
 using PixelFlow.Runtime.Levels;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using VContainer;
 #if ENABLE_INPUT_SYSTEM
@@ -16,14 +15,18 @@ namespace PixelFlow.Runtime.Managers
     [DisallowMultipleComponent]
     public sealed class InputManager : MonoBehaviour
     {
-        private static readonly List<RaycastResult> UiRaycastResults = new();
+        private const int MaxPigHitCount = 16;
 
         [SerializeField, HideInInspector] private Camera inputCamera;
-        [SerializeField] private LayerMask pigLayerMask = 1 << 7;
+        [SerializeField] private LayerMask pigLayerMask = 1 << 6;
         [SerializeField, Min(1f)] private float maxRayDistance = 500f;
+
+        private readonly RaycastHit[] pigHitBuffer = new RaycastHit[MaxPigHitCount];
+        private Selectable[] selectableBuffer = Array.Empty<Selectable>();
 
         private GameManager gameManager;
         private LevelSessionController levelSessionController;
+        private ISoundService soundService;
 
         public Camera InputCamera => ResolveActiveCamera();
 
@@ -46,9 +49,7 @@ namespace PixelFlow.Runtime.Managers
 
         private void Update()
         {
-            var activeCamera = ResolveActiveCamera();
             if (gameManager == null
-                || activeCamera == null
                 || levelSessionController == null
                 || !levelSessionController.AcceptsInput)
             {
@@ -65,12 +66,21 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
+            var activeCamera = ResolveActiveCamera();
+            if (activeCamera == null)
+            {
+                return;
+            }
+
             if (!TryResolveClickedDispatchablePig(activeCamera, screenPosition, out var pig))
             {
                 return;
             }
 
-            gameManager.TryDispatchPig(pig);
+            if (gameManager.TryDispatchPig(pig))
+            {
+                soundService?.PlayPigSelect();
+            }
         }
 
         [Inject]
@@ -82,10 +92,12 @@ namespace PixelFlow.Runtime.Managers
         [Inject]
         public void InjectSceneDependencies(
             GameManager injectedGameManager,
-            LevelSessionController injectedLevelSessionController)
+            LevelSessionController injectedLevelSessionController,
+            ISoundService injectedSoundService)
         {
             gameManager = injectedGameManager;
             levelSessionController = injectedLevelSessionController;
+            soundService = injectedSoundService;
         }
 
         private void ConfigureFromProjectSettings(ProjectRuntimeSettings settings)
@@ -122,21 +134,26 @@ namespace PixelFlow.Runtime.Managers
 
         private Camera ResolveActiveCamera()
         {
+            if (HasValidSceneCamera(inputCamera))
+            {
+                return inputCamera;
+            }
+
             EnsureInputCameraReference();
-            return inputCamera != null ? inputCamera : Camera.main;
+            return inputCamera;
         }
 
         private void EnsureInputCameraReference(bool preferSceneMain = false)
         {
-            var sceneMainCamera = Camera.main;
-            if (sceneMainCamera != null && sceneMainCamera.gameObject.scene == gameObject.scene)
+            if (!preferSceneMain && HasValidSceneCamera(inputCamera))
             {
-                inputCamera = sceneMainCamera;
                 return;
             }
 
-            if (!preferSceneMain && inputCamera != null && inputCamera.gameObject.scene == gameObject.scene)
+            var sceneMainCamera = Camera.main;
+            if (HasValidSceneCamera(sceneMainCamera))
             {
+                inputCamera = sceneMainCamera;
                 return;
             }
 
@@ -144,7 +161,7 @@ namespace PixelFlow.Runtime.Managers
             for (int i = 0; i < cameras.Length; i++)
             {
                 var candidate = cameras[i];
-                if (candidate != null && candidate.gameObject.scene == gameObject.scene)
+                if (HasValidSceneCamera(candidate))
                 {
                     inputCamera = candidate;
                     return;
@@ -154,17 +171,27 @@ namespace PixelFlow.Runtime.Managers
             inputCamera = sceneMainCamera;
         }
 
+        private bool HasValidSceneCamera(Camera camera)
+        {
+            return camera != null
+                && camera.gameObject.scene == gameObject.scene;
+        }
+
         private void EnsurePigLayerMask()
         {
-            if (pigLayerMask.value != 0)
+            var pigLayer = LayerMask.NameToLayer("Pig");
+            if (pigLayerMask.value == 0)
             {
+                pigLayerMask = pigLayer >= 0
+                    ? 1 << pigLayer
+                    : 1 << 6;
                 return;
             }
 
-            var pigLayer = LayerMask.NameToLayer("Pig");
-            pigLayerMask = pigLayer >= 0
-                ? 1 << pigLayer
-                : 1 << 7;
+            if (pigLayer >= 0)
+            {
+                pigLayerMask |= 1 << pigLayer;
+            }
         }
 
         private bool TryResolveClickedDispatchablePig(Camera activeCamera, Vector2 screenPosition, out PigController pig)
@@ -176,17 +203,22 @@ namespace PixelFlow.Runtime.Managers
             }
 
             var ray = activeCamera.ScreenPointToRay(screenPosition);
-            var hits = Physics.RaycastAll(ray, maxRayDistance, ~0, QueryTriggerInteraction.Ignore);
-            if (hits == null || hits.Length == 0)
+            var hitCount = Physics.RaycastNonAlloc(
+                ray,
+                pigHitBuffer,
+                maxRayDistance,
+                pigLayerMask,
+                QueryTriggerInteraction.Ignore);
+            if (hitCount <= 0)
             {
                 return false;
             }
 
-            Array.Sort(hits, static (left, right) => left.distance.CompareTo(right.distance));
-            for (int i = 0; i < hits.Length; i++)
+            var closestDistance = float.PositiveInfinity;
+            for (int i = 0; i < hitCount; i++)
             {
-                var hitPig = hits[i].collider != null
-                    ? hits[i].collider.GetComponentInParent<PigController>()
+                var hitPig = pigHitBuffer[i].collider != null
+                    ? pigHitBuffer[i].collider.GetComponentInParent<PigController>()
                     : null;
                 if (hitPig == null)
                 {
@@ -198,11 +230,16 @@ namespace PixelFlow.Runtime.Managers
                     continue;
                 }
 
+                if (pigHitBuffer[i].distance >= closestDistance)
+                {
+                    continue;
+                }
+
+                closestDistance = pigHitBuffer[i].distance;
                 pig = dispatchPig;
-                return true;
             }
 
-            return false;
+            return pig != null;
         }
 
         private static bool TryGetPrimaryPointerReleased(out Vector2 screenPosition)
@@ -233,35 +270,78 @@ namespace PixelFlow.Runtime.Managers
             return false;
         }
 
-        private static bool IsPointerOverBlockingUi(Vector2 screenPosition)
+        private bool IsPointerOverBlockingUi(Vector2 screenPosition)
         {
-            if (EventSystem.current == null)
+            var selectableCount = Selectable.allSelectableCount;
+            if (selectableCount <= 0)
             {
                 return false;
             }
 
-            UiRaycastResults.Clear();
-            var pointerData = new PointerEventData(EventSystem.current)
+            EnsureSelectableBufferCapacity(selectableCount);
+            var copiedCount = Selectable.AllSelectablesNoAlloc(selectableBuffer);
+            for (int i = 0; i < copiedCount; i++)
             {
-                position = screenPosition
-            };
-
-            EventSystem.current.RaycastAll(pointerData, UiRaycastResults);
-            for (int i = 0; i < UiRaycastResults.Count; i++)
-            {
-                var target = UiRaycastResults[i].gameObject;
-                if (target == null)
+                var selectable = selectableBuffer[i];
+                if (!TryGetBlockingSelectableRect(selectable, out var rectTransform, out var eventCamera))
                 {
                     continue;
                 }
 
-                if (target.GetComponentInParent<Selectable>() != null)
+                if (!RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, eventCamera))
                 {
-                    return true;
+                    continue;
                 }
+
+                return true;
             }
 
             return false;
+        }
+
+        private void EnsureSelectableBufferCapacity(int requiredCapacity)
+        {
+            if (selectableBuffer.Length >= requiredCapacity)
+            {
+                return;
+            }
+
+            selectableBuffer = new Selectable[Mathf.NextPowerOfTwo(requiredCapacity)];
+        }
+
+        private static bool TryGetBlockingSelectableRect(
+            Selectable selectable,
+            out RectTransform rectTransform,
+            out Camera eventCamera)
+        {
+            rectTransform = null;
+            eventCamera = null;
+            if (selectable == null || !selectable.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            var targetGraphic = selectable.targetGraphic;
+            if (targetGraphic != null)
+            {
+                if (!targetGraphic.isActiveAndEnabled || !targetGraphic.raycastTarget)
+                {
+                    return false;
+                }
+
+                rectTransform = targetGraphic.rectTransform;
+                var canvas = targetGraphic.canvas;
+                if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                {
+                    eventCamera = canvas.worldCamera;
+                }
+            }
+            else
+            {
+                rectTransform = selectable.transform as RectTransform;
+            }
+
+            return rectTransform != null;
         }
     }
 }
