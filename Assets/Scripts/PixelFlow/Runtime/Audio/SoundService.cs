@@ -8,6 +8,10 @@ namespace PixelFlow.Runtime.Audio
     {
         private const string AudioResourceRoot = "Audio/";
         private const string HostObjectName = "__SoundService";
+        private const float PopMinInterval = 0.035f;
+        private const float JumpMinInterval = 0.06f;
+        private const float ShootMinInterval = 0.025f;
+        private const float OutcomeMinInterval = 0.2f;
 
         private GameObject hostObject;
         private AudioSource sfxSource;
@@ -17,6 +21,11 @@ namespace PixelFlow.Runtime.Audio
         private AudioClip popClip;
         private AudioClip shootClip;
         private AudioClip winClip;
+        private float lastJumpPlayTime = float.NegativeInfinity;
+        private float lastLosePlayTime = float.NegativeInfinity;
+        private float lastPopPlayTime = float.NegativeInfinity;
+        private float lastShootPlayTime = float.NegativeInfinity;
+        private float lastWinPlayTime = float.NegativeInfinity;
 
         public void Initialize()
         {
@@ -46,45 +55,45 @@ namespace PixelFlow.Runtime.Audio
 
         public void PlayClick()
         {
-            PlaySfx(popClip);
+            PlaySfx(popClip, 1f, PopMinInterval, ref lastPopPlayTime);
         }
 
         public void PlayPopupOpen()
         {
-            PlaySfx(popClip);
+            PlaySfx(popClip, 1f, PopMinInterval, ref lastPopPlayTime);
         }
 
         public void PlayWin()
         {
-            PlaySfx(winClip);
+            PlaySfx(winClip, 1f, OutcomeMinInterval, ref lastWinPlayTime);
         }
 
         public void PlayLose()
         {
-            PlaySfx(loseClip);
+            PlaySfx(loseClip, 1f, OutcomeMinInterval, ref lastLosePlayTime);
         }
 
         public void PlayJump()
         {
-            PlaySfx(jumpClip);
+            PlaySfx(jumpClip, 1f, JumpMinInterval, ref lastJumpPlayTime);
         }
 
         public void PlayShoot()
         {
-            PlaySfx(shootClip, 0.6f);
+            PlaySfx(shootClip, 0.6f, ShootMinInterval, ref lastShootPlayTime);
         }
 
         public void PlayPigSelect()
         {
-            PlaySfx(popClip);
+            PlaySfx(popClip, 1f, PopMinInterval, ref lastPopPlayTime);
         }
 
         public void PlayPop()
         {
-            PlaySfx(popClip);
+            PlaySfx(popClip, 1f, PopMinInterval, ref lastPopPlayTime);
         }
 
-        private void PlaySfx(AudioClip clip, float volume = 1f)
+        private void PlaySfx(AudioClip clip, float volume, float minInterval, ref float lastPlayTime)
         {
             EnsureInitialized();
             if (sfxSource == null || clip == null)
@@ -92,6 +101,13 @@ namespace PixelFlow.Runtime.Audio
                 return;
             }
 
+            var currentTime = Application.isPlaying ? Time.unscaledTime : Time.realtimeSinceStartup;
+            if (currentTime - lastPlayTime < minInterval)
+            {
+                return;
+            }
+
+            lastPlayTime = currentTime;
             sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
         }
 
@@ -114,6 +130,8 @@ namespace PixelFlow.Runtime.Audio
                 sfxSource.playOnAwake = false;
                 sfxSource.loop = false;
                 sfxSource.spatialBlend = 0f;
+                sfxSource.dopplerLevel = 0f;
+                sfxSource.reverbZoneMix = 0f;
             }
 
             if (musicSource == null)

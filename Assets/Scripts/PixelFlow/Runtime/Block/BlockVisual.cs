@@ -65,6 +65,11 @@ namespace PixelFlow.Runtime.Visuals
             RenderCurrentState();
         }
 
+        private void OnDisable()
+        {
+            CancelDestroySequence();
+        }
+
         public void ApplyColor(PigColor color)
         {
             ApplyColor(color, PigColorAtlasUtility.ResolveDefaultToneIndex(color));

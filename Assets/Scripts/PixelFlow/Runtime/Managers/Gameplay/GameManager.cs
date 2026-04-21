@@ -1,8 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 using Dreamteck.Splines;
 using PixelFlow.Runtime.Composition;
 using PixelFlow.Runtime.Data;
@@ -23,11 +21,9 @@ namespace PixelFlow.Runtime.Managers
     public sealed class GameManager : MonoBehaviour
     {
         private static int playSessionVersion;
-        private static bool primeTweenCapacityConfigured;
         private const float QueuedPigVerticalOffset = 0.6f;
         private const float TargetSelectionEpsilon = 0.0001f;
         private const float DispatchEntryClearanceDistance = 1.25f;
-        private const int PrimeTweenTweensCapacity = 2048;
 
         private float dispatchFollowSpeed = 7f;
         private float traySendDuration = 0.45f;
@@ -64,8 +60,7 @@ namespace PixelFlow.Runtime.Managers
         private GameManagerTargetingCoordinator targetingCoordinator;
         private GameManagerBurstCoordinator burstCoordinator;
         private PigRendererVisibilityCoordinator pigRendererVisibilityCoordinator;
-        private int observedPlaySessionVersion = -1;
-        private CancellationTokenSource dispatchWarmupCts;
+        private GameManagerRuntimeCoordinator runtimeCoordinator;
         private Transform runtimeDeckRoot;
 
         public IReadOnlyList<PigController> QueuedPigs => queuedPigs;
@@ -95,8 +90,7 @@ namespace PixelFlow.Runtime.Managers
 
         private void LateUpdate()
         {
-            ApplyRuntimeFrameRateCap();
-            BootstrapRuntimeIfNeeded();
+            ResolveRuntimeCoordinator().Update();
 
             if (environment == null)
             {
@@ -143,7 +137,7 @@ namespace PixelFlow.Runtime.Managers
         {
             if (settings == null)
             {
-                ApplyRuntimeFrameRateCap();
+                ResolveRuntimeCoordinator().ApplyFrameRateCap();
                 EnsureGameplayLayerCollisionMatrix();
                 return;
             }
@@ -159,13 +153,13 @@ namespace PixelFlow.Runtime.Managers
             burstRampDuration = Mathf.Max(0.01f, settings.BurstRampDuration);
             burstFireIntervalMultiplier = Mathf.Max(0.01f, settings.BurstFireIntervalMultiplier);
             EnsureGameplayCollaborators(refreshSettings: true);
-            ApplyRuntimeFrameRateCap();
+            ResolveRuntimeCoordinator().ApplyFrameRateCap();
             EnsureGameplayLayerCollisionMatrix();
         }
 
         public void Construct(EnvironmentContext resolvedEnvironment)
         {
-            EnsurePrimeTweenCapacity();
+            ResolveRuntimeCoordinator().EnsurePrimeTweenCapacity();
             environment = resolvedEnvironment;
             if (environment != null)
             {
@@ -179,7 +173,7 @@ namespace PixelFlow.Runtime.Managers
             EnsureGameplayLayerCollisionMatrix();
             ResetBurstMode();
             RefreshQueueVisuals(snapWaitingPigs: true);
-            ScheduleDispatchWarmup();
+            ResolveRuntimeCoordinator().ScheduleDispatchWarmup();
         }
 
         public void InitializeWaitingLanes(IReadOnlyList<List<PigController>> lanes)
@@ -196,7 +190,7 @@ namespace PixelFlow.Runtime.Managers
             runtimeDeckRoot = deckRoot;
             trayQueueCoordinator?.InitializeWaitingLanes(lanes, pendingLaneEntries);
             RebuildTrackedPigRegistry();
-            ScheduleDispatchWarmup();
+            ResolveRuntimeCoordinator().ScheduleDispatchWarmup();
         }
 
         public void SetBurstModeActive(bool active)
@@ -511,35 +505,6 @@ namespace PixelFlow.Runtime.Managers
             Physics.IgnoreLayerCollision(layerA, layerB, !enabled);
         }
 
-        private void ApplyRuntimeFrameRateCap()
-        {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
-
-            var resolvedTargetFrameRate = Mathf.Max(30, targetFrameRate);
-            if (ShouldDisableVSyncForCurrentPlatform()
-                && QualitySettings.vSyncCount != 0)
-            {
-                QualitySettings.vSyncCount = 0;
-            }
-
-            if (Application.targetFrameRate != resolvedTargetFrameRate)
-            {
-                Application.targetFrameRate = resolvedTargetFrameRate;
-            }
-        }
-
-        private static bool ShouldDisableVSyncForCurrentPlatform()
-        {
-            return Application.isMobilePlatform
-                || Application.isEditor
-                || Application.platform == RuntimePlatform.WindowsPlayer
-                || Application.platform == RuntimePlatform.OSXPlayer
-                || Application.platform == RuntimePlatform.LinuxPlayer;
-        }
-
         private void UpdateConveyorPigFiring()
         {
             EnsureGameplayCollaborators();
@@ -575,67 +540,6 @@ namespace PixelFlow.Runtime.Managers
 
             ResolveEnvironmentReferences();
             return dispatchSpline;
-        }
-
-        private void BootstrapRuntimeIfNeeded()
-        {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
-
-            var resolvedLevelSessionController = ResolveLevelSessionController();
-            if (sceneContext == null || resolvedLevelSessionController == null)
-            {
-                return;
-            }
-
-            if (observedPlaySessionVersion < 0)
-            {
-                observedPlaySessionVersion = playSessionVersion;
-            }
-            else if (observedPlaySessionVersion != playSessionVersion)
-            {
-                ResetForPlaySession();
-                observedPlaySessionVersion = playSessionVersion;
-            }
-
-            sceneContext.InitializeRuntimeSessionIfNeeded();
-            if (!sceneContext.RuntimeSessionInitialized)
-            {
-                return;
-            }
-
-            var resolvedEnvironment = environment != null && environment.gameObject != null && environment.gameObject.activeInHierarchy
-                ? environment
-                : sceneContext.EnvironmentInstance != null && sceneContext.EnvironmentInstance.gameObject != null && sceneContext.EnvironmentInstance.gameObject.activeInHierarchy
-                    ? sceneContext.EnvironmentInstance
-                    : sceneContext.EnsureEnvironment();
-
-            if (resolvedLevelSessionController == null
-                || resolvedEnvironment == null)
-            {
-                return;
-            }
-
-            if (environment != resolvedEnvironment)
-            {
-                Construct(resolvedEnvironment);
-            }
-
-            if (!resolvedLevelSessionController.HasLoadedInitialLevel)
-            {
-                resolvedLevelSessionController.LoadInitialLevelIfNeeded();
-                return;
-            }
-
-            if (resolvedLevelSessionController.CurrentRunState == LevelRunState.Won
-                || resolvedLevelSessionController.CurrentRunState == LevelRunState.Lost)
-            {
-                return;
-            }
-
-            resolvedLevelSessionController.EnsureCurrentLevelLoaded();
         }
 
         private void UpdatePigRendererVisibility()
@@ -736,7 +640,7 @@ namespace PixelFlow.Runtime.Managers
 
         private void ResetForPlaySession()
         {
-            CancelDispatchWarmup();
+            runtimeCoordinator?.CancelDispatchWarmup();
             ResetBurstMode();
             environment = null;
             dispatchSpline = null;
@@ -750,12 +654,33 @@ namespace PixelFlow.Runtime.Managers
 
         private void OnDisable()
         {
-            CancelDispatchWarmup();
+            runtimeCoordinator?.CancelDispatchWarmup();
+            burstCoordinator?.Reset();
         }
 
         private void OnDestroy()
         {
-            CancelDispatchWarmup();
+            runtimeCoordinator?.CancelDispatchWarmup();
+            burstCoordinator?.Reset();
+        }
+
+        private GameManagerRuntimeCoordinator ResolveRuntimeCoordinator()
+        {
+            if (runtimeCoordinator != null)
+            {
+                return runtimeCoordinator;
+            }
+
+            runtimeCoordinator = new GameManagerRuntimeCoordinator(
+                () => targetFrameRate,
+                () => playSessionVersion,
+                () => sceneContext,
+                ResolveLevelSessionController,
+                () => environment,
+                Construct,
+                ResetForPlaySession,
+                PrewarmDispatchRuntime);
+            return runtimeCoordinator;
         }
 
         private LevelSessionController ResolveLevelSessionController()
@@ -769,47 +694,12 @@ namespace PixelFlow.Runtime.Managers
             return levelSessionController;
         }
 
-        private void ScheduleDispatchWarmup()
+        private void PrewarmDispatchRuntime()
         {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
-
-            CancelDispatchWarmup();
-            dispatchWarmupCts = new CancellationTokenSource();
-            RunDispatchWarmupAsync(dispatchWarmupCts.Token).Forget();
-        }
-
-        private void CancelDispatchWarmup()
-        {
-            if (dispatchWarmupCts == null)
-            {
-                return;
-            }
-
-            dispatchWarmupCts.Cancel();
-            dispatchWarmupCts.Dispose();
-            dispatchWarmupCts = null;
-        }
-
-        private async UniTaskVoid RunDispatchWarmupAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                await UniTask.Yield();
-                cancellationToken.ThrowIfCancellationRequested();
-                await UniTask.Yield();
-                cancellationToken.ThrowIfCancellationRequested();
-
-                EnsureGameplayCollaborators();
-                trayQueueCoordinator?.PrewarmDispatchRuntime();
-                PrewarmPigDispatchRuntime();
-                WarmupTweenDispatchPath();
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            EnsureGameplayCollaborators();
+            trayQueueCoordinator?.PrewarmDispatchRuntime();
+            PrewarmPigDispatchRuntime();
+            WarmupTweenDispatchPath();
         }
 
         private void PrewarmPigDispatchRuntime()
@@ -837,17 +727,6 @@ namespace PixelFlow.Runtime.Managers
         private void WarmupTweenDispatchPath()
         {
             Tween.Custom(this, 0f, 1f, 0.0001f, static (_, _) => { }, Ease.Linear);
-        }
-
-        private static void EnsurePrimeTweenCapacity()
-        {
-            if (primeTweenCapacityConfigured)
-            {
-                return;
-            }
-
-            PrimeTweenConfig.SetTweensCapacity(PrimeTweenTweensCapacity);
-            primeTweenCapacityConfigured = true;
         }
 
         private void RegisterTrackedPig(PigController pig)

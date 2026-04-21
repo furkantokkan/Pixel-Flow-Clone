@@ -71,6 +71,7 @@ namespace PixelFlow.Runtime.Pigs
         private Vector3 dispatchMidpoint;
         private Quaternion dispatchStartRotation;
         private Quaternion dispatchEndRotation;
+        private Quaternion dispatchMidRotation;
         private float dispatchFirstHalfDuration;
         private float dispatchSecondHalfDuration;
         private SplineComputer pendingDispatchSpline;
@@ -197,6 +198,7 @@ namespace PixelFlow.Runtime.Pigs
 
         private void OnDisable()
         {
+            StopDispatchTween();
             StopBeltDepleteSequence();
             if (subscribedSplineFollower != null)
             {
@@ -342,6 +344,7 @@ namespace PixelFlow.Runtime.Pigs
             var peakHeight = Mathf.Max(dispatchStartPosition.y, dispatchEndPosition.y) + activeDispatchJumpHeight;
             dispatchMidpoint = Vector3.Lerp(dispatchStartPosition, dispatchEndPosition, 0.5f);
             dispatchMidpoint.y = peakHeight;
+            dispatchMidRotation = ResolveFlatLookRotation(dispatchMidpoint - dispatchStartPosition, dispatchEndRotation);
             dispatchFirstHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration * 0.5f);
             dispatchSecondHalfDuration = Mathf.Max(0.01f, resolvedDispatchDuration - dispatchFirstHalfDuration);
             dispatchTween = Tween.Custom(
@@ -538,7 +541,7 @@ namespace PixelFlow.Runtime.Pigs
         {
             elapsed = Mathf.Max(0f, elapsed);
             Vector3 currentPosition;
-            Vector3 lookTarget;
+            Quaternion currentRotation;
             if (elapsed <= dispatchFirstHalfDuration)
             {
                 var firstHalfT = dispatchFirstHalfDuration <= 0.0001f
@@ -546,7 +549,7 @@ namespace PixelFlow.Runtime.Pigs
                     : Mathf.Clamp01(elapsed / dispatchFirstHalfDuration);
                 var easedFirstHalfT = 1f - ((1f - firstHalfT) * (1f - firstHalfT));
                 currentPosition = Vector3.LerpUnclamped(dispatchStartPosition, dispatchMidpoint, easedFirstHalfT);
-                lookTarget = firstHalfT < 0.98f ? dispatchMidpoint : dispatchEndPosition;
+                currentRotation = Quaternion.SlerpUnclamped(dispatchStartRotation, dispatchMidRotation, easedFirstHalfT);
             }
             else
             {
@@ -556,16 +559,11 @@ namespace PixelFlow.Runtime.Pigs
                     : Mathf.Clamp01(secondHalfElapsed / dispatchSecondHalfDuration);
                 var easedSecondHalfT = secondHalfT * secondHalfT;
                 currentPosition = Vector3.LerpUnclamped(dispatchMidpoint, dispatchEndPosition, easedSecondHalfT);
-                lookTarget = dispatchEndPosition;
+                currentRotation = Quaternion.SlerpUnclamped(dispatchMidRotation, dispatchEndRotation, easedSecondHalfT);
             }
 
             transform.position = currentPosition;
-            var lookDirection = lookTarget - currentPosition;
-            lookDirection.y = 0f;
-            if (lookDirection.sqrMagnitude > 0.0001f)
-            {
-                RotateTowards(lookDirection);
-            }
+            transform.rotation = currentRotation;
         }
 
         private void UpdateSplineFollowing()
@@ -818,8 +816,17 @@ namespace PixelFlow.Runtime.Pigs
             pendingDispatchFollowSpeed = -1f;
             activeDispatchJumpHeight = 0f;
             dispatchMidpoint = Vector3.zero;
+            dispatchMidRotation = Quaternion.identity;
             dispatchFirstHalfDuration = 0f;
             dispatchSecondHalfDuration = 0f;
+        }
+
+        private static Quaternion ResolveFlatLookRotation(Vector3 direction, Quaternion fallbackRotation)
+        {
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(direction.normalized, Vector3.up)
+                : fallbackRotation;
         }
 
         private void ClearRuntimeState()

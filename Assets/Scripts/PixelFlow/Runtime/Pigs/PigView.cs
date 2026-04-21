@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.Visuals;
+using PrimeTween;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -23,6 +24,8 @@ namespace PixelFlow.Runtime.Pigs
         [SerializeField] private Transform projectileOrigin;
         [SerializeField, Min(0f)] private float trayProjectileHeightOffset = 0.12f;
         [SerializeField, Min(0f)] private float trayProjectileForwardOffset = 0.08f;
+        [SerializeField, Min(0.01f)] private float facingTransitionDuration = 0.2f;
+        [SerializeField] private Ease facingTransitionEase = Ease.InOutSine;
 
         private Transform cachedVisualRoot;
         private Quaternion visualRootBaseLocalRotation;
@@ -32,6 +35,10 @@ namespace PixelFlow.Runtime.Pigs
         private Renderer[] cachedRenderers = Array.Empty<Renderer>();
         private Collider[] cachedColliders = Array.Empty<Collider>();
         private bool targetingSourcesCached;
+        private bool animateFacingCorrectionOnNextApply;
+        private Tween visualFacingTween;
+        private Quaternion visualFacingTweenStartLocalRotation;
+        private Quaternion visualFacingTweenEndLocalRotation;
 
         public Transform ProjectileOrigin => projectileOrigin != null ? projectileOrigin : transform;
         public Vector3 ProjectileOriginPosition => ResolveProjectileOriginPosition();
@@ -55,6 +62,11 @@ namespace PixelFlow.Runtime.Pigs
         {
             EnsureReferences();
             ApplyRendererVisibility();
+        }
+
+        private void OnDisable()
+        {
+            StopVisualFacingTween();
         }
 
         public void Render(PigModel model)
@@ -91,7 +103,7 @@ namespace PixelFlow.Runtime.Pigs
                 trayRoot.gameObject.SetActive(false);
             }
 
-            SetBeltFacingMode(false);
+            SetBeltFacingModeInternal(false, animate: false);
             SetRenderersVisible(true);
         }
 
@@ -125,13 +137,7 @@ namespace PixelFlow.Runtime.Pigs
 
         public void SetBeltFacingMode(bool enabled)
         {
-            if (useBeltFacingCorrection == enabled)
-            {
-                return;
-            }
-
-            useBeltFacingCorrection = enabled;
-            EnsureReferences();
+            SetBeltFacingModeInternal(enabled, animate: true);
         }
 
 #if UNITY_EDITOR
@@ -152,6 +158,20 @@ namespace PixelFlow.Runtime.Pigs
             CacheTargetingSources();
             atlasColorTarget?.SetExcludedRoot(trayRoot);
             ApplyVisualFacingCorrection(applyEditorPreviewFacingCorrection);
+        }
+
+        private void SetBeltFacingModeInternal(bool enabled, bool animate)
+        {
+            if (useBeltFacingCorrection == enabled
+                && !visualFacingTween.isAlive
+                && !animateFacingCorrectionOnNextApply)
+            {
+                return;
+            }
+
+            useBeltFacingCorrection = enabled;
+            animateFacingCorrectionOnNextApply = animate && Application.isPlaying;
+            EnsureReferences();
         }
 
         private void CacheTargetingSources()
@@ -199,13 +219,17 @@ namespace PixelFlow.Runtime.Pigs
 
             if (visualRoot == null)
             {
+                StopVisualFacingTween();
                 cachedVisualRoot = null;
                 hasVisualRootBaseRotation = false;
+                animateFacingCorrectionOnNextApply = false;
                 return;
             }
 
+            var visualRootChanged = cachedVisualRoot != visualRoot;
             if (cachedVisualRoot != visualRoot)
             {
+                StopVisualFacingTween();
                 cachedVisualRoot = visualRoot;
                 visualRootBaseLocalRotation = visualRoot.localRotation;
                 hasVisualRootBaseRotation = true;
@@ -221,7 +245,80 @@ namespace PixelFlow.Runtime.Pigs
                 ? BeltFacingOffset
                 : QueueFacingOffset;
 
-            visualRoot.localRotation = visualRootBaseLocalRotation * facingOffset;
+            var targetLocalRotation = visualRootBaseLocalRotation * facingOffset;
+            if (!animateFacingCorrectionOnNextApply
+                && visualFacingTween.isAlive
+                && !visualRootChanged
+                && Quaternion.Angle(visualFacingTweenEndLocalRotation, targetLocalRotation) <= 0.01f)
+            {
+                return;
+            }
+
+            var shouldAnimate = animateFacingCorrectionOnNextApply
+                && !visualRootChanged
+                && facingTransitionDuration > 0.01f
+                && Quaternion.Angle(visualRoot.localRotation, targetLocalRotation) > 0.01f;
+            animateFacingCorrectionOnNextApply = false;
+            if (!shouldAnimate)
+            {
+                StopVisualFacingTween();
+                visualRoot.localRotation = targetLocalRotation;
+                return;
+            }
+
+            StartVisualFacingTween(targetLocalRotation);
+        }
+
+        private void StartVisualFacingTween(Quaternion targetLocalRotation)
+        {
+            if (visualRoot == null)
+            {
+                return;
+            }
+
+            StopVisualFacingTween();
+            visualFacingTweenStartLocalRotation = visualRoot.localRotation;
+            visualFacingTweenEndLocalRotation = targetLocalRotation;
+            visualFacingTween = Tween.Custom(
+                    this,
+                    0f,
+                    1f,
+                    facingTransitionDuration,
+                    static (target, t) => target.UpdateVisualFacingTween(t),
+                    facingTransitionEase)
+                .OnComplete(this, static target => target.CompleteVisualFacingTween());
+        }
+
+        private void UpdateVisualFacingTween(float t)
+        {
+            if (visualRoot == null)
+            {
+                return;
+            }
+
+            visualRoot.localRotation = Quaternion.SlerpUnclamped(
+                visualFacingTweenStartLocalRotation,
+                visualFacingTweenEndLocalRotation,
+                t);
+        }
+
+        private void CompleteVisualFacingTween()
+        {
+            visualFacingTween = default;
+            if (visualRoot != null)
+            {
+                visualRoot.localRotation = visualFacingTweenEndLocalRotation;
+            }
+        }
+
+        private void StopVisualFacingTween()
+        {
+            if (visualFacingTween.isAlive)
+            {
+                visualFacingTween.Stop();
+            }
+
+            visualFacingTween = default;
         }
 
         private Transform ResolveVisualRoot()

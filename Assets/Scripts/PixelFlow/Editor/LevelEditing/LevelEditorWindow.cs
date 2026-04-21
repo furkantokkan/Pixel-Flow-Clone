@@ -2035,7 +2035,20 @@ namespace PixelFlow.Editor.LevelEditing
             PlayerPrefs.SetInt(CurrentLevelPrefsKey, selectedLevelIndex);
             PlayerPrefs.Save();
             BuildLevelPopupNames();
-            statusMessage = $"Saved {workingLevelName} and marked it as the active playtest level.";
+            CleanupTemporaryTestGeneration();
+            statusMessage = $"Saved {workingLevelName}, marked it as the active playtest level, and cleared any temporary test generation.";
+        }
+
+        private void CleanupTemporaryTestGeneration()
+        {
+            TemporaryLevelSceneService.CleanupTemporaryArtifacts(
+                TemporaryTestLevelRootName,
+                TemporaryTestBoardRootName,
+                TemporaryTestDeckRootName);
+
+            EditorApplication.QueuePlayerLoopUpdate();
+            SceneView.RepaintAll();
+            Repaint();
         }
 
         private LevelData CreateWorkingLevelSnapshot()
