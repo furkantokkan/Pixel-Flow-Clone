@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
@@ -12,6 +11,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
+using ZLinq;
 using static UnityEngine.GUILayout;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("PrimeTween.Internal")]
 
@@ -50,7 +50,7 @@ namespace PrimeTween {
             var listRequest = Client.List(true);
             while (!listRequest.IsCompleted) {
             }
-            return listRequest.Result.Any(_ => _.name == pluginPackageId);
+            return listRequest.Result.AsValueEnumerable().Any(_ => _.name == pluginPackageId);
         }
 
         public override void OnInspectorGUI() {
@@ -231,6 +231,7 @@ DefaultImporter:
             }
             Assert.AreEqual(StatusCode.Success, listRequest.Status);
             string[] folders = listRequest.Result
+                .AsValueEnumerable()
                 .Where(x => x.source == PackageSource.Embedded || x.source == PackageSource.Local)
                 .Where(x => x.name != InstallerInspector.pluginPackageId)
                 .Select(x => x.assetPath)
@@ -427,15 +428,18 @@ DefaultImporter:
         internal static void Find() {
             OpCodeDict = typeof(OpCodes)
                 .GetFields(BindingFlags.Public | BindingFlags.Static)
+                .AsValueEnumerable()
                 .Select(x => (OpCode)x.GetValue(null))
                 .ToDictionary(x => x.Value, x => x);
             #if PRIME_TWEEN_INSTALLED
             methodsWithBug = typeof(Sequence).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .AsValueEnumerable()
                 .Where(methodInfo => methodInfo.Name == nameof(Sequence.ChainCallback) || methodInfo.Name == nameof(Sequence.InsertCallback))
                 .Select(methodInfo => methodInfo.IsGenericMethod ? methodInfo.GetGenericMethodDefinition() : methodInfo)
                 .ToArray();
             Assert.AreEqual(4, methodsWithBug.Length);
             groupMethods = typeof(Sequence).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .AsValueEnumerable()
                 .Where(methodInfo => methodInfo.Name == nameof(Sequence.Group))
                 .ToArray();
             #endif
@@ -443,12 +447,27 @@ DefaultImporter:
 
             string methodAssemblyName = methodsWithBug[0].Module.Assembly.FullName;
             const BindingFlags findAll = BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-            int numPotentialIssues = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(assembly => assembly.GetReferencedAssemblies().Any(dependency => dependency.FullName == methodAssemblyName))
-                .Where(assembly => !assembly.GetName().Name.StartsWith("PrimeTween.", StringComparison.Ordinal))
-                .SelectMany(assembly => assembly.GetTypes())
-                .SelectMany(type => type.GetMethods(findAll).Cast<MethodBase>().Union(type.GetConstructors(findAll)))
-                .Count(method => FindInMethod(method));
+            int numPotentialIssues = 0;
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                if (!assembly.GetReferencedAssemblies().AsValueEnumerable().Any(dependency => dependency.FullName == methodAssemblyName)) {
+                    continue;
+                }
+                if (assembly.GetName().Name.StartsWith("PrimeTween.", StringComparison.Ordinal)) {
+                    continue;
+                }
+                foreach (var type in assembly.GetTypes()) {
+                    foreach (var method in type.GetMethods(findAll)) {
+                        if (FindInMethod(method)) {
+                            numPotentialIssues++;
+                        }
+                    }
+                    foreach (var constructor in type.GetConstructors(findAll)) {
+                        if (FindInMethod(constructor)) {
+                            numPotentialIssues++;
+                        }
+                    }
+                }
+            }
             if (numPotentialIssues == 0) {
                 Debug.Log($"PrimeTween updated to version {InstallerInspector.version}: no potential issues found in ChainCallback() and InsertCallback() usages.\n" +
                           $"More info: {moreInfoUrl}\n");
@@ -510,7 +529,7 @@ DefaultImporter:
                             int token = (int)br.ReadUInt32();
                             if (method.Module.ResolveMethod(token) is MethodInfo resolvedMethod) {
                                 if (bugFound) {
-                                    if (groupMethods.Contains(resolvedMethod)) {
+                                    if (groupMethods.AsValueEnumerable().Contains(resolvedMethod)) {
                                         Debug.LogError($"PrimeTween updated to version {InstallerInspector.version}: potential breaking change found in the '{method.DeclaringType}.{method.Name}()' method.\n" +
                                                        "Please double-check the behavior if Group() is called immediately after the ChainCallback() or InsertCallback() and apply the fix manually if necessary.\n" +
                                                        "Or use ChainCallbackObsolete/InsertCallbackObsolete() instead to preserve the old incorrect behavior.\n" +

@@ -1,6 +1,8 @@
 using PixelFlow.Runtime.Bullets;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Visuals;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 using UnityEngine;
 
 namespace PixelFlow.Runtime.Pooling
@@ -23,5 +25,6 @@ namespace PixelFlow.Runtime.Pooling
         void ReturnBlock(BlockVisual block);
         void ReturnBullet(BulletController bullet);
         void ReturnAll();
+        UniTask PrewarmBulletsAsync(int desiredCount, int batchSize, CancellationToken cancellationToken = default);
     }
 }

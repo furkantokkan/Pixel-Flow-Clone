@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Dreamteck.Splines;
 using PixelFlow.Runtime.Composition;
 using PixelFlow.Runtime.Data;
@@ -679,7 +681,7 @@ namespace PixelFlow.Runtime.Managers
                 () => environment,
                 Construct,
                 ResetForPlaySession,
-                PrewarmDispatchRuntime);
+                PrewarmDispatchRuntimeAsync);
             return runtimeCoordinator;
         }
 
@@ -694,12 +696,26 @@ namespace PixelFlow.Runtime.Managers
             return levelSessionController;
         }
 
-        private void PrewarmDispatchRuntime()
+        private async UniTask PrewarmDispatchRuntimeAsync(CancellationToken cancellationToken)
         {
             EnsureGameplayCollaborators();
             trayQueueCoordinator?.PrewarmDispatchRuntime();
             PrewarmPigDispatchRuntime();
+            var visualPool = sceneContext?.VisualPoolService;
+            if (visualPool != null)
+            {
+                await visualPool.PrewarmBulletsAsync(ResolveBulletWarmupCount(), batchSize: 8, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
             WarmupTweenDispatchPath();
+        }
+
+        private int ResolveBulletWarmupCount()
+        {
+            var queueCapacity = Mathf.Max(QueueCapacity, 0);
+            var activePigCount = Mathf.Max(activeConveyorPigs.Count, 0);
+            return Mathf.Max(24, Mathf.Max(queueCapacity * 4, activePigCount * 4));
         }
 
         private void PrewarmPigDispatchRuntime()

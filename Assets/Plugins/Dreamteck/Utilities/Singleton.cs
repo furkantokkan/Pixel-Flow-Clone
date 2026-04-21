@@ -1,7 +1,7 @@
 namespace Dreamteck
 {
-    using System.Linq;
     using UnityEngine;
+    using ZLinq;
 
     public class Singleton<T> : PrivateSingleton<T> where T : Component
     {
@@ -11,7 +11,7 @@ namespace Dreamteck
             {
                 if (_instance == null)
                 {
-                    _instance = Object.FindObjectsOfType<T>().FirstOrDefault();
+                    _instance = Object.FindObjectsOfType<T>().AsValueEnumerable().FirstOrDefault();
                 }
 
                 return _instance;

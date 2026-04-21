@@ -21,7 +21,7 @@ namespace PixelFlow.Runtime.Managers
         private readonly Func<EnvironmentContext> currentEnvironmentProvider;
         private readonly Action<EnvironmentContext> constructEnvironment;
         private readonly Action resetForPlaySession;
-        private readonly Action prewarmDispatchRuntime;
+        private readonly Func<CancellationToken, UniTask> prewarmDispatchRuntimeAsync;
 
         private int observedPlaySessionVersion = -1;
         private CancellationTokenSource dispatchWarmupCts;
@@ -34,7 +34,7 @@ namespace PixelFlow.Runtime.Managers
             Func<EnvironmentContext> currentEnvironmentProvider,
             Action<EnvironmentContext> constructEnvironment,
             Action resetForPlaySession,
-            Action prewarmDispatchRuntime)
+            Func<CancellationToken, UniTask> prewarmDispatchRuntimeAsync)
         {
             this.targetFrameRateProvider = targetFrameRateProvider;
             this.playSessionVersionProvider = playSessionVersionProvider;
@@ -43,7 +43,7 @@ namespace PixelFlow.Runtime.Managers
             this.currentEnvironmentProvider = currentEnvironmentProvider;
             this.constructEnvironment = constructEnvironment;
             this.resetForPlaySession = resetForPlaySession;
-            this.prewarmDispatchRuntime = prewarmDispatchRuntime;
+            this.prewarmDispatchRuntimeAsync = prewarmDispatchRuntimeAsync;
         }
 
         public void Update()
@@ -179,7 +179,10 @@ namespace PixelFlow.Runtime.Managers
                 await UniTask.Yield();
                 cancellationToken.ThrowIfCancellationRequested();
 
-                prewarmDispatchRuntime?.Invoke();
+                if (prewarmDispatchRuntimeAsync != null)
+                {
+                    await prewarmDispatchRuntimeAsync(cancellationToken);
+                }
             }
             catch (OperationCanceledException)
             {

@@ -1,10 +1,13 @@
 using System;
 using Core.Pool;
+using Cysharp.Threading.Tasks;
 using PixelFlow.Runtime.Bullets;
 using PixelFlow.Runtime.Composition;
 using PixelFlow.Runtime.LevelEditing;
 using PixelFlow.Runtime.Pigs;
 using PixelFlow.Runtime.Visuals;
+using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace PixelFlow.Runtime.Pooling
@@ -108,6 +111,57 @@ namespace PixelFlow.Runtime.Pooling
             pigPool?.ReturnAll();
             blockPool?.ReturnAll();
             bulletPool?.ReturnAll();
+        }
+
+        public async UniTask PrewarmBulletsAsync(int desiredCount, int batchSize, CancellationToken cancellationToken = default)
+        {
+            EnsureInitialized();
+            if (bulletPool == null)
+            {
+                return;
+            }
+
+            var targetCount = Mathf.Clamp(desiredCount, 0, bulletMaxSize);
+            if (targetCount <= 0)
+            {
+                return;
+            }
+
+            var currentCapacity = ActiveBulletCount + bulletPool.InactiveCount;
+            var missingCount = targetCount - currentCapacity;
+            if (missingCount <= 0)
+            {
+                return;
+            }
+
+            var resolvedBatchSize = Mathf.Max(1, batchSize);
+            var buffer = new List<BulletController>(missingCount);
+            try
+            {
+                for (var i = 0; i < missingCount; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var bullet = RentBullet();
+                    if (bullet == null)
+                    {
+                        break;
+                    }
+
+                    buffer.Add(bullet);
+                    if ((i + 1) % resolvedBatchSize == 0)
+                    {
+                        await System.Threading.Tasks.Task.Yield();
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                }
+            }
+            finally
+            {
+                for (var i = 0; i < buffer.Count; i++)
+                {
+                    ReturnBullet(buffer[i]);
+                }
+            }
         }
 
         public void Dispose()

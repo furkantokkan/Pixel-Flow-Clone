@@ -86,12 +86,13 @@ namespace PixelFlow.Runtime.Managers
             }
 
             conveyorPigBuffer.Clear();
-            for (int i = activeConveyorPigs.Count - 1; i >= 0; i--)
+            for (int i = 0; i < activeConveyorPigs.Count; i++)
             {
                 var pig = activeConveyorPigs[i];
                 if (pig == null)
                 {
                     activeConveyorPigs.RemoveAt(i);
+                    i--;
                     continue;
                 }
 
@@ -103,20 +104,21 @@ namespace PixelFlow.Runtime.Managers
                 if (pig.State != PigState.FollowingSpline)
                 {
                     activeConveyorPigs.RemoveAt(i);
+                    i--;
                     continue;
                 }
 
-                conveyorPigBuffer.Add(pig);
+                // Conveyor pigs do not overtake each other, so dispatch order stays aligned with
+                // front-to-back firing priority and avoids re-sorting the list every frame.
+                if (pig.CanAttemptBeltShot)
+                {
+                    conveyorPigBuffer.Add(pig);
+                }
             }
 
-            conveyorPigBuffer.Sort(static (left, right) => right.CurrentSplinePercent.CompareTo(left.CurrentSplinePercent));
             for (int i = 0; i < conveyorPigBuffer.Count; i++)
             {
-                var pig = conveyorPigBuffer[i];
-                if (pig != null && pig.CanAttemptBeltShot)
-                {
-                    TryFirePig(pig, onPigDepleted);
-                }
+                TryFirePig(conveyorPigBuffer[i], onPigDepleted);
             }
         }
 

@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using DigitalOpus.MB.Core;
 using System.Text;
-using System.Linq;
 using static DigitalOpus.MB.MBEditor.GameObjectFilterInfo;
+using ZLinq;
 
 namespace DigitalOpus.MB.MBEditor
 {
@@ -284,7 +284,7 @@ namespace DigitalOpus.MB.MBEditor
                                                    materials[i],
                                                    MB2_LogLevel.info);
 
-                    string[] propertyNames = texPropertyNamesList.Select(stp => stp.name).ToArray();
+                    string[] propertyNames = texPropertyNamesList.AsValueEnumerable().Select(stp => stp.name).ToArray();
 
                     foreach (string propName in propertyNames)
                     {

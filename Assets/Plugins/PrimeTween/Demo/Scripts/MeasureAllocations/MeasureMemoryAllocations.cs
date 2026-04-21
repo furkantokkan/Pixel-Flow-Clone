@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR && UNITY_2019_1_OR_NEWER
-using System.Linq;
 using UnityEditor;
 using UnityEditor.Profiling;
 using UnityEditorInternal;
 using UnityEngine.Profiling;
+using ZLinq;
 #endif
 
 namespace PrimeTweenDemo {
@@ -88,7 +88,7 @@ namespace PrimeTweenDemo {
                                 }
                                 var itemPath = data.GetItemPath(childId);
                                 foreach (var filter in filterAllocations) {
-                                    if (itemPath.Contains(filter) && !ignoreAllocations.Any(itemPath.Contains)) {
+                                    if (itemPath.Contains(filter) && !ignoreAllocations.AsValueEnumerable().Any(itemPath.Contains)) {
                                         if (logFiltered) {
                                             print($"FILTER   {itemPath}");
                                         }

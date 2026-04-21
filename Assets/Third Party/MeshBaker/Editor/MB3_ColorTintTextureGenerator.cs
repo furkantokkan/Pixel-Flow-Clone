@@ -5,9 +5,9 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
-using System.Linq;
 using System;
 using DigitalOpus.MB.Core;
+using ZLinq;
 
 
 namespace DigitalOpus.MB.MBEditor
@@ -129,10 +129,10 @@ namespace DigitalOpus.MB.MBEditor
             List<Material> matsToCombine = new List<Material>();
             for (int i = 0; i < objsToCombine.Count; i++)
             {
-                matsToCombine.AddRange(objsToCombine[i].GetComponent<Renderer>().sharedMaterials.ToList());
+                matsToCombine.AddRange(objsToCombine[i].GetComponent<Renderer>().sharedMaterials);
             }
             // ensure our material list does not contain duplicates
-            matsToCombine = matsToCombine.Distinct().ToList();
+            matsToCombine = matsToCombine.AsValueEnumerable().Distinct().ToList();
             //do validation on materials
             for (int i = matsToCombine.Count - 1; i >= 0; i--)
             {
@@ -210,7 +210,7 @@ namespace DigitalOpus.MB.MBEditor
                         colorsOnMats.Add(tintColor);
                     }
                 }
-                colorsOnMats = colorsOnMats.Distinct().ToList();
+                colorsOnMats = colorsOnMats.AsValueEnumerable().Distinct().ToList();
                 for (int i = 0; i < colorsOnMats.Count; i++)
                 {
                     Color tintColor = colorsOnMats[i];

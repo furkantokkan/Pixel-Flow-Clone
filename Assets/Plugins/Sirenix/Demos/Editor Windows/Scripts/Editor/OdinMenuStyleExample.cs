@@ -4,10 +4,10 @@ namespace Sirenix.OdinInspector.Demos
     using Sirenix.OdinInspector.Editor;
     using UnityEngine;
     using UnityEditor;
-    using System.Linq;
     using Sirenix.Utilities;
     using System.Collections.Generic;
     using Sirenix.Utilities.Editor;
+    using ZLinq;
 
     public class OdinMenuStyleExample : OdinMenuEditorWindow
     {
@@ -92,13 +92,17 @@ namespace Sirenix.OdinInspector.Demos
                 if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
                 {
                     var selection = this.MenuTree.Selection
+                        .AsValueEnumerable()
                         .Select(x => x.Value)
                         .OfType<SomeCustomClass>();
 
                     if (selection.Any())
                     {
                         var enabled = !selection.FirstOrDefault().Enabled;
-                        selection.ForEach(x => x.Enabled = enabled);
+                        foreach (var item in selection)
+                        {
+                            item.Enabled = enabled;
+                        }
                         Event.current.Use();
                     }
                 }

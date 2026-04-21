@@ -5,9 +5,9 @@ using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Text.RegularExpressions;
-using System.Linq;
 using Dreamteck.Splines.Primitives;
 using System;
+using ZLinq;
 
 namespace Dreamteck.Splines.IO
 {
@@ -414,11 +414,11 @@ namespace Dreamteck.Splines.IO
             if (contents == "ERROR") return 0;
             string elementName = GetAttributeContent(pathNode, "id");
             if (elementName == "ERROR") elementName = fileName + "_path " + (paths.Count + 1);
-            IEnumerable<string> tokens = Regex.Split(contents, @"(?=[A-Za-z])").Where(t => !string.IsNullOrEmpty(t));
+            var tokens = Regex.Split(contents, @"(?=[A-Za-z])").AsValueEnumerable().Where(t => !string.IsNullOrEmpty(t));
             int numSplines = 0;
             foreach (string token in tokens)
             {
-                char cmd = token.Substring(0, 1).Single();
+                char cmd = token[0];
                 switch (cmd)
                 {
                     case 'M':
@@ -495,7 +495,7 @@ namespace Dreamteck.Splines.IO
         {
             if (buffer != null) WriteBufferTo(paths);
             buffer = new SplineDefinition(name, Spline.Type.Bezier);
-            if (relative) buffer.position = paths.Last().GetLastPoint().position;
+            if (relative) buffer.position = paths[paths.Count - 1].GetLastPoint().position;
             Vector2[] vectors = ParseVector2(coords);
             foreach (Vector3 vector in vectors)
             {
