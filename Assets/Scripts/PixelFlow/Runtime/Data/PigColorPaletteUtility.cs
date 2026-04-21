@@ -11,6 +11,7 @@ namespace PixelFlow.Runtime.Data
             PigColor.Red,
             PigColor.Pink,
             PigColor.Blue,
+            PigColor.DarkBlue,
             PigColor.Green,
             PigColor.Yellow,
             PigColor.Orange,
@@ -28,6 +29,7 @@ namespace PixelFlow.Runtime.Data
                 new(PigColor.Red, GetDefaultDisplayColor(PigColor.Red)),
                 new(PigColor.Pink, GetDefaultDisplayColor(PigColor.Pink)),
                 new(PigColor.Blue, GetDefaultDisplayColor(PigColor.Blue)),
+                new(PigColor.DarkBlue, GetDefaultDisplayColor(PigColor.DarkBlue)),
                 new(PigColor.Green, GetDefaultDisplayColor(PigColor.Green)),
                 new(PigColor.Yellow, GetDefaultDisplayColor(PigColor.Yellow)),
                 new(PigColor.Orange, GetDefaultDisplayColor(PigColor.Orange)),
@@ -64,7 +66,7 @@ namespace PixelFlow.Runtime.Data
                 return new Color32(18, 18, 20, 255);
             }
 
-            var previewBaseColor = ResolveAtlasPreviewBaseColor(colorIndex);
+            var previewBaseColor = Core.Runtime.ColorAtlas.AtlasPreviewPaletteUtility.ResolveBaseColor(colorIndex);
             var clampedToneIndex = Core.Runtime.ColorAtlas.AtlasPaletteConstants.ClampToneIndex(toneIndex);
             var toneLerp = clampedToneIndex / (float)Core.Runtime.ColorAtlas.AtlasPaletteConstants.MaxToneIndex;
             var brightness = Mathf.Lerp(0.28f, 1f, toneLerp);
@@ -115,6 +117,16 @@ namespace PixelFlow.Runtime.Data
             }
 
             return GetDefaultDisplayColor(color);
+        }
+
+        public static string GetDisplayName(PigColor color)
+        {
+            return color switch
+            {
+                PigColor.None => "Empty",
+                PigColor.DarkBlue => "Dark Blue",
+                _ => color.ToString(),
+            };
         }
 
         public static PigColor GetClosestColor(Color source, IReadOnlyList<PigColorPaletteEntry> paletteEntries)
@@ -253,7 +265,8 @@ namespace PixelFlow.Runtime.Data
             {
                 PigColor.Red => new Color32(242, 71, 71, 255),
                 PigColor.Pink => new Color32(255, 115, 184, 255),
-                PigColor.Blue => new Color32(87, 158, 255, 255),
+                PigColor.Blue => new Color32(72, 170, 255, 255),
+                PigColor.DarkBlue => new Color32(0, 78, 158, 255),
                 PigColor.Green => new Color32(87, 219, 115, 255),
                 PigColor.Yellow => new Color32(255, 217, 64, 255),
                 PigColor.Orange => new Color32(255, 148, 51, 255),
@@ -266,26 +279,6 @@ namespace PixelFlow.Runtime.Data
             };
         }
 
-        private static Color ResolveAtlasPreviewBaseColor(int colorIndex)
-        {
-            return Core.Runtime.ColorAtlas.AtlasPaletteConstants.ClampColorIndex(colorIndex) switch
-            {
-                1 => new Color32(188, 48, 48, 255),
-                2 => new Color32(210, 150, 195, 255),
-                3 => new Color32(110, 68, 156, 255),
-                4 => new Color32(173, 57, 173, 255),
-                5 => new Color32(0, 95, 191, 255),
-                6 => new Color32(48, 161, 172, 255),
-                9 => new Color32(74, 186, 82, 255),
-                10 => new Color32(54, 189, 54, 255),
-                11 => new Color32(191, 191, 63, 255),
-                12 => new Color32(188, 125, 40, 255),
-                13 => new Color32(177, 42, 42, 255),
-                14 => new Color32(128, 128, 132, 255),
-                15 => new Color32(200, 200, 200, 255),
-                _ => new Color32(184, 184, 188, 255),
-            };
-        }
     }
 
     public static class PigColorAtlasUtility
@@ -297,6 +290,7 @@ namespace PixelFlow.Runtime.Data
                 PigColor.Red => 13,
                 PigColor.Pink => 2,
                 PigColor.Blue => 5,
+                PigColor.DarkBlue => 5,
                 PigColor.Green => 10,
                 PigColor.Yellow => 11,
                 PigColor.Orange => 12,
@@ -314,7 +308,9 @@ namespace PixelFlow.Runtime.Data
             return color switch
             {
                 PigColor.Black => Core.Runtime.ColorAtlas.AtlasPaletteConstants.MinToneIndex,
+                PigColor.DarkBlue => 9,
                 PigColor.Gray => 9,
+                PigColor.Blue => Core.Runtime.ColorAtlas.AtlasPaletteConstants.MaxToneIndex,
                 PigColor.White => Core.Runtime.ColorAtlas.AtlasPaletteConstants.MaxToneIndex,
                 _ => 13,
             };

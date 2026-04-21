@@ -12,7 +12,7 @@ namespace PixelFlow.Runtime.Managers
     {
         private const float TargetSelectionEpsilon = 0.0001f;
 
-        private readonly List<PigController> activeConveyorPigs;
+        private readonly GameManagerQueueRuntimeState queueState;
         private readonly List<PigController> conveyorPigBuffer = new();
         private readonly ISoundService soundService;
 
@@ -23,13 +23,17 @@ namespace PixelFlow.Runtime.Managers
         private float beltShotDistance;
         private LayerMask beltShotLayerMask;
 
-        public GameManagerTargetingCoordinator(List<PigController> activeConveyorPigs, ISoundService soundService)
+        public GameManagerTargetingCoordinator(GameManagerQueueRuntimeState queueState, ISoundService soundService)
         {
-            this.activeConveyorPigs = activeConveyorPigs;
+            this.queueState = queueState;
             this.soundService = soundService;
         }
 
-        public IReadOnlyList<PigController> ActiveConveyorPigs => activeConveyorPigs;
+        public IReadOnlyList<PigController> ActiveConveyorPigs => queueState != null
+            ? queueState.ActiveConveyorPigs
+            : System.Array.Empty<PigController>();
+
+        private List<PigController> activeConveyorPigs => queueState?.ActiveConveyorPigs;
 
         public void Configure(
             EnvironmentContext environment,

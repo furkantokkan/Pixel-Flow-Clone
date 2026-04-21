@@ -145,6 +145,7 @@ MonoBehaviour:
   colorIndexOverride: 2
   toneIndexOverride: 13
   enableOutline: 0
+  outlineWidthOverride: -1
   currentColor: 1
   currentToneIndex: 13
   excludedRoot: {fileID: 1912279199987948307}
@@ -172,8 +173,8 @@ MonoBehaviour:
   defaultFollowSpeed: 7
   dispatchDuration: 0.45
   dispatchJumpHeight: 1.75
-  beltFireInterval: 0.1
-  initialBeltShotDelay: 0.1
+  beltFireInterval: 0.075
+  initialBeltShotDelay: 0.05
   orbitRadius: 1.15
   orbitAngularSpeed: 180
   orbitDuration: 0.85
@@ -200,6 +201,8 @@ MonoBehaviour:
   projectileOrigin: {fileID: 7989488854454774189}
   trayProjectileHeightOffset: 0.12
   trayProjectileForwardOffset: 0.08
+  facingTransitionDuration: 0.2
+  facingTransitionEase: 4
 --- !u!114 &5734821930899590610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -549,12 +552,24 @@ PrefabInstance:
     m_TransformParent: {fileID: 7989488854454774189}
     m_Modifications:
     - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.2121
+      objectReference: {fileID: 0}
+    - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.2121
+      objectReference: {fileID: 0}
+    - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.2121
+      objectReference: {fileID: 0}
+    - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.54
+      value: -0.4
       objectReference: {fileID: 0}
     - target: {fileID: 5572122917888894419, guid: cd9210cb31789fe469ddf36ebb40f170, type: 3}
       propertyPath: m_LocalPosition.z

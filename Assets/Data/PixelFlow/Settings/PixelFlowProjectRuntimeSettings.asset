@@ -30,7 +30,7 @@ MonoBehaviour:
   beltShotDistance: 20
   burstFollowSpeedMultiplier: 1.85
   burstRampDuration: 0.35
-  burstFireIntervalMultiplier: 0.7
+  burstFireIntervalMultiplier: 0.55
   pigLayerMask:
     serializedVersion: 2
     m_Bits: 64

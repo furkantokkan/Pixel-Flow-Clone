@@ -18,8 +18,8 @@ namespace PixelFlow.Runtime.Levels
     {
         private const int BurstRemainingPigThreshold = 4;
 
-        private readonly int[] remainingAmmoCountsByColor = new int[(int)PigColor.White + 1];
-        private readonly int[] exposureLayerCountsByColor = new int[(int)PigColor.White + 1];
+        private readonly int[] remainingAmmoCountsByColor = new int[(int)PigColor.DarkBlue + 1];
+        private readonly int[] exposureLayerCountsByColor = new int[(int)PigColor.DarkBlue + 1];
         private bool[] occupiedBuffer = Array.Empty<bool>();
         private PigColor[] targetColorsBuffer = Array.Empty<PigColor>();
         private bool[] exposedTargetsBuffer = Array.Empty<bool>();

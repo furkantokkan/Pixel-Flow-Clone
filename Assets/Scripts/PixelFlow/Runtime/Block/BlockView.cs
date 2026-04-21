@@ -6,8 +6,11 @@ namespace PixelFlow.Runtime.Visuals
     [DisallowMultipleComponent]
     public sealed class BlockView : MonoBehaviour
     {
+        private const float FallbackReservedOutlineWidth = 0.12f;
+
         [SerializeField] private AtlasColorTarget atlasColorTarget;
         [SerializeField] private Renderer[] renderers;
+        [SerializeField, Min(0f)] private float reservedOutlineWidth = FallbackReservedOutlineWidth;
 
         private void Awake()
         {
@@ -31,7 +34,8 @@ namespace PixelFlow.Runtime.Visuals
                 return;
             }
 
-            Render(model.Color, model.ToneIndex, model.IsReserved && !model.IsDying);
+            bool outlined = model.IsReserved && !model.IsDying;
+            Render(model.Color, model.ToneIndex, outlined, outlined ? ResolveReservedOutlineWidth() : -1f);
         }
 
         public void Render(PigColor color)
@@ -46,15 +50,22 @@ namespace PixelFlow.Runtime.Visuals
 
         public void Render(PigColor color, int toneIndex, bool outlined)
         {
+            Render(color, toneIndex, outlined, -1f);
+        }
+
+        public void Render(PigColor color, int toneIndex, bool outlined, float outlineWidth)
+        {
             EnsureReferences();
             atlasColorTarget?.SetColor(color, toneIndex);
             atlasColorTarget?.SetOutline(outlined);
+            atlasColorTarget?.SetOutlineWidth(outlined ? outlineWidth : -1f);
             SetVisible(true);
         }
 
         public void Clear()
         {
             atlasColorTarget?.SetOutline(false);
+            atlasColorTarget?.SetOutlineWidth(-1f);
             SetVisible(false);
         }
 
@@ -83,6 +94,11 @@ namespace PixelFlow.Runtime.Visuals
             {
                 renderers = GetComponentsInChildren<Renderer>(true);
             }
+        }
+
+        private float ResolveReservedOutlineWidth()
+        {
+            return reservedOutlineWidth > 0f ? reservedOutlineWidth : FallbackReservedOutlineWidth;
         }
 
     }

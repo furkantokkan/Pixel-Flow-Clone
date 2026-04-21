@@ -13,21 +13,16 @@ namespace PixelFlow.Runtime.Managers
     internal sealed class GameManagerTrayQueueCoordinator
     {
         private const float QueuedPigVerticalOffset = 0.6f;
+        private const float TraySendRotationDegrees = -90f;
+        private const float TrayReturnRotationDegrees = 90f;
 
-        private readonly List<PigController> queuedPigs;
-        private readonly List<PigController> holdingPigs;
-        private readonly List<TrayController> trayStackVisuals;
-        private readonly HashSet<PigController> pigsUsingTrayStack;
+        private readonly GameManagerQueueRuntimeState queueState;
         private readonly HashSet<ActiveTrayTransfer> activeTrayTransfers = new();
         private readonly Stack<Transform> trayTransferVisualPool = new();
-        private readonly List<List<PigController>> waitingLanes;
         private readonly List<List<PigQueueEntry>> pendingLaneEntries = new();
         private readonly List<PigQueueEntry> pendingQueueEntries = new();
-        private readonly Dictionary<PigController, int> pigLaneLookup;
-        private readonly Dictionary<PigController, int> pigHoldingLookup;
         private readonly Func<EnvironmentContext> environmentProvider;
         private readonly Func<int> queueCapacityProvider;
-        private readonly Func<IReadOnlyList<PigController>> activeConveyorPigsProvider;
         private readonly Action<PigController> registerConveyorPig;
         private readonly Action<PigController> unregisterConveyorPig;
         private readonly Action<PigController> releasePig;
@@ -44,16 +39,9 @@ namespace PixelFlow.Runtime.Managers
         private GameObject trayTransferTemplate;
 
         public GameManagerTrayQueueCoordinator(
-            List<PigController> queuedPigs,
-            List<PigController> holdingPigs,
-            List<TrayController> trayStackVisuals,
-            HashSet<PigController> pigsUsingTrayStack,
-            List<List<PigController>> waitingLanes,
-            Dictionary<PigController, int> pigLaneLookup,
-            Dictionary<PigController, int> pigHoldingLookup,
+            GameManagerQueueRuntimeState queueState,
             Func<EnvironmentContext> environmentProvider,
             Func<int> queueCapacityProvider,
-            Func<IReadOnlyList<PigController>> activeConveyorPigsProvider,
             Action<PigController> registerConveyorPig,
             Action<PigController> unregisterConveyorPig,
             Action<PigController> releasePig,
@@ -64,16 +52,9 @@ namespace PixelFlow.Runtime.Managers
             Func<Vector3> resolveTrayEquipPosition,
             ISoundService soundService)
         {
-            this.queuedPigs = queuedPigs;
-            this.holdingPigs = holdingPigs;
-            this.trayStackVisuals = trayStackVisuals;
-            this.pigsUsingTrayStack = pigsUsingTrayStack;
-            this.waitingLanes = waitingLanes;
-            this.pigLaneLookup = pigLaneLookup;
-            this.pigHoldingLookup = pigHoldingLookup;
+            this.queueState = queueState;
             this.environmentProvider = environmentProvider;
             this.queueCapacityProvider = queueCapacityProvider;
-            this.activeConveyorPigsProvider = activeConveyorPigsProvider;
             this.registerConveyorPig = registerConveyorPig;
             this.unregisterConveyorPig = unregisterConveyorPig;
             this.releasePig = releasePig;
@@ -92,6 +73,14 @@ namespace PixelFlow.Runtime.Managers
 
         private EnvironmentContext Environment => environmentProvider();
         private int QueueCapacity => queueCapacityProvider();
+        private List<PigController> queuedPigs => queueState.QueuedPigs;
+        private List<PigController> holdingPigs => queueState.HoldingPigs;
+        private List<TrayController> trayStackVisuals => queueState.TrayStackVisuals;
+        private HashSet<PigController> pigsUsingTrayStack => queueState.PigsUsingTrayStack;
+        private List<List<PigController>> waitingLanes => queueState.WaitingLanes;
+        private Dictionary<PigController, int> pigLaneLookup => queueState.PigLaneLookup;
+        private Dictionary<PigController, int> pigHoldingLookup => queueState.PigHoldingLookup;
+        private List<PigController> activeConveyorPigs => queueState.ActiveConveyorPigs;
 
         public void Configure(float traySendDuration, float trayReturnDuration, float trayTransferArcHeight)
         {
@@ -230,7 +219,8 @@ namespace PixelFlow.Runtime.Managers
                 return false;
             }
 
-            if (!ignoreTrayAvailability && !TryBorrowTray(pig))
+            var shouldBorrowTray = !ignoreTrayAvailability || AvailableTrayCount > 0;
+            if (shouldBorrowTray && !TryBorrowTray(pig))
             {
                 return false;
             }
@@ -335,7 +325,6 @@ namespace PixelFlow.Runtime.Managers
                 holdingPigs[slotIndex] = null;
             }
 
-            var activeConveyorPigs = activeConveyorPigsProvider();
             if (activeConveyorPigs != null)
             {
                 var activePigBuffer = new List<PigController>(activeConveyorPigs.Count);
@@ -425,7 +414,6 @@ namespace PixelFlow.Runtime.Managers
 
         private bool ContainsActiveConveyorPig(PigController pig)
         {
-            var activeConveyorPigs = activeConveyorPigsProvider();
             if (pig == null || activeConveyorPigs == null)
             {
                 return false;
@@ -503,9 +491,8 @@ namespace PixelFlow.Runtime.Managers
                     if (pig.State != PigState.ReturningToWaiting)
                     {
                         pig.SetQueued(true, snapImmediately: snapWaitingPigs);
+                        pig.SetOnBelt(false);
                     }
-
-                    pig.SetOnBelt(false);
                 }
             }
         }
@@ -552,9 +539,8 @@ namespace PixelFlow.Runtime.Managers
                 if (pig.State != PigState.ReturningToWaiting)
                 {
                     pig.SetQueued(true, snapImmediately: snapHoldingPigs);
+                    pig.SetOnBelt(false);
                 }
-
-                pig.SetOnBelt(false);
             }
         }
 
@@ -784,10 +770,17 @@ namespace PixelFlow.Runtime.Managers
             }
 
             var trayStartPosition = ResolveTraySendStartPosition();
+            var trayStartRotation = ResolveTraySendStartRotation();
             AvailableTrayCount = Mathf.Max(0, AvailableTrayCount - 1);
             RefreshQueueVisuals();
             soundService?.PlayJump();
-            StartTrayTransfer(trayStartPosition, ResolveTrayEquipPosition(), traySendDuration, incrementTrayCountOnComplete: false);
+            StartTrayTransfer(
+                trayStartPosition,
+                ResolveTrayEquipPosition(),
+                trayStartRotation,
+                ResolveTraySendTargetRotation(trayStartRotation),
+                traySendDuration,
+                incrementTrayCountOnComplete: false);
             return true;
         }
 
@@ -799,12 +792,21 @@ namespace PixelFlow.Runtime.Managers
             }
 
             soundService?.PlayJump();
-            StartTrayTransfer(startPosition, ResolveTrayReturnTargetPosition(), trayReturnDuration, incrementTrayCountOnComplete: true);
+            var startRotation = ResolveTrayReturnStartRotation(pig);
+            StartTrayTransfer(
+                startPosition,
+                ResolveTrayReturnTargetPosition(),
+                startRotation,
+                ResolveTrayReturnTargetRotation(startRotation),
+                trayReturnDuration,
+                incrementTrayCountOnComplete: true);
         }
 
         private void StartTrayTransfer(
             Vector3 startPosition,
             Vector3 endPosition,
+            Quaternion startRotation,
+            Quaternion endRotation,
             float duration,
             bool incrementTrayCountOnComplete)
         {
@@ -818,7 +820,7 @@ namespace PixelFlow.Runtime.Managers
                 return;
             }
 
-            var trayTransform = CreateAnimatedTrayVisual(startPosition);
+            var trayTransform = CreateAnimatedTrayVisual(startPosition, startRotation);
             if (trayTransform == null)
             {
                 if (incrementTrayCountOnComplete)
@@ -834,6 +836,8 @@ namespace PixelFlow.Runtime.Managers
                 trayTransform,
                 startPosition,
                 endPosition,
+                startRotation,
+                endRotation,
                 incrementTrayCountOnComplete);
             activeTrayTransfers.Add(transfer);
             transfer.Tween = Tween.Custom(
@@ -846,7 +850,7 @@ namespace PixelFlow.Runtime.Managers
                 .OnComplete(transfer, static target => target.Complete());
         }
 
-        private Transform CreateAnimatedTrayVisual(Vector3 startPosition)
+        private Transform CreateAnimatedTrayVisual(Vector3 startPosition, Quaternion startRotation)
         {
             var template = ResolveTrayAnimationTemplate();
             if (template == null)
@@ -862,7 +866,7 @@ namespace PixelFlow.Runtime.Managers
                 trayTransform = trayTransferVisualPool.Pop();
                 if (trayTransform == null)
                 {
-                    return CreateAnimatedTrayVisual(startPosition);
+                    return CreateAnimatedTrayVisual(startPosition, startRotation);
                 }
             }
             else
@@ -883,7 +887,7 @@ namespace PixelFlow.Runtime.Managers
 
             trayObject.SetActive(true);
             trayTransform.position = startPosition;
-            trayTransform.rotation = template.transform.rotation;
+            trayTransform.rotation = startRotation;
 
             var trayController = trayObject.GetComponent<TrayController>();
             if (trayController != null)
@@ -904,6 +908,7 @@ namespace PixelFlow.Runtime.Managers
             var position = Vector3.Lerp(transfer.StartPosition, transfer.EndPosition, t);
             position.y += Mathf.Sin(t * Mathf.PI) * trayTransferArcHeight;
             transfer.Transform.position = position;
+            transfer.Transform.rotation = Quaternion.SlerpUnclamped(transfer.StartRotation, transfer.EndRotation, t);
         }
 
         private void CompleteTrayTransfer(ActiveTrayTransfer transfer)
@@ -917,6 +922,7 @@ namespace PixelFlow.Runtime.Managers
             if (transfer.Transform != null)
             {
                 transfer.Transform.position = transfer.EndPosition;
+                transfer.Transform.rotation = transfer.EndRotation;
             }
 
             if (transfer.IncrementTrayCountOnComplete)
@@ -960,6 +966,46 @@ namespace PixelFlow.Runtime.Managers
                 : ResolveRuntimeFallbackPosition();
         }
 
+        private Quaternion ResolveTraySendStartRotation()
+        {
+            CacheTrayStackVisuals();
+            var environment = Environment;
+            if (trayStackVisuals.Count > 0 && AvailableTrayCount > 0)
+            {
+                var trayIndex = Mathf.Clamp(AvailableTrayCount - 1, 0, trayStackVisuals.Count - 1);
+                var trayVisual = trayStackVisuals[trayIndex];
+                if (trayVisual != null)
+                {
+                    return trayVisual.transform.rotation;
+                }
+            }
+
+            if (environment?.TrayRoot != null)
+            {
+                return environment.TrayRoot.rotation;
+            }
+
+            return trayTransferTemplate != null
+                ? trayTransferTemplate.transform.rotation
+                : Quaternion.identity;
+        }
+
+        private Quaternion ResolveTraySendTargetRotation(Quaternion fallbackStartRotation)
+        {
+            var environment = Environment;
+            if (environment?.TrayEquipPos != null)
+            {
+                return environment.TrayEquipPos.rotation;
+            }
+
+            if (environment?.TrayDropPos != null)
+            {
+                return environment.TrayDropPos.rotation;
+            }
+
+            return fallbackStartRotation * Quaternion.Euler(0f, TraySendRotationDegrees, 0f);
+        }
+
         private Vector3 ResolveTrayEquipPosition()
         {
             var environment = Environment;
@@ -990,6 +1036,30 @@ namespace PixelFlow.Runtime.Managers
             return environment?.TrayRoot != null
                 ? environment.TrayRoot.position
                 : ResolveRuntimeFallbackPosition();
+        }
+
+        private Quaternion ResolveTrayReturnStartRotation(PigController pig)
+        {
+            var environment = Environment;
+            if (environment?.TrayDropPos != null)
+            {
+                return environment.TrayDropPos.rotation;
+            }
+
+            return pig != null
+                ? pig.transform.rotation
+                : ResolveTraySendStartRotation();
+        }
+
+        private Quaternion ResolveTrayReturnTargetRotation(Quaternion fallbackStartRotation)
+        {
+            var environment = Environment;
+            if (environment?.TrayRoot != null)
+            {
+                return environment.TrayRoot.rotation;
+            }
+
+            return fallbackStartRotation * Quaternion.Euler(0f, TrayReturnRotationDegrees, 0f);
         }
 
         private void CompleteTrayReturn()
@@ -1268,7 +1338,7 @@ namespace PixelFlow.Runtime.Managers
                 BeginReturnTray(pig, ResolveTrayDropStartPosition(pig));
                 pig.ClearWaitingAnchor();
                 pig.SetQueued(false);
-                pig.SetOnBelt(false);
+                pig.HideTray();
                 releasePig?.Invoke(pig);
                 triggerLevelFail?.Invoke();
                 RefreshQueueVisuals();
@@ -1417,18 +1487,24 @@ namespace PixelFlow.Runtime.Managers
                 Transform transform,
                 Vector3 startPosition,
                 Vector3 endPosition,
+                Quaternion startRotation,
+                Quaternion endRotation,
                 bool incrementTrayCountOnComplete)
             {
                 this.owner = owner;
                 Transform = transform;
                 StartPosition = startPosition;
                 EndPosition = endPosition;
+                StartRotation = startRotation;
+                EndRotation = endRotation;
                 IncrementTrayCountOnComplete = incrementTrayCountOnComplete;
             }
 
             public Transform Transform { get; }
             public Vector3 StartPosition { get; }
             public Vector3 EndPosition { get; }
+            public Quaternion StartRotation { get; }
+            public Quaternion EndRotation { get; }
             public bool IncrementTrayCountOnComplete { get; }
             public Tween Tween { get; set; }
 

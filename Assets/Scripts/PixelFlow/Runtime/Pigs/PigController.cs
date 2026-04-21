@@ -52,6 +52,7 @@ namespace PixelFlow.Runtime.Pigs
         private Vector3 defaultLocalPosition;
         private Quaternion defaultLocalRotation;
         private Vector3 defaultLocalScale;
+        private Vector3 defaultWorldScale;
         private Transform waitingAnchor;
         private Vector3 waitingOffset;
         private Transform orbitTarget;
@@ -210,7 +211,10 @@ namespace PixelFlow.Runtime.Pigs
         public void ConfigurePig(PigColor color, int ammo, PigDirection direction = PigDirection.None)
         {
             model.Configure(color, ammo, direction);
+            StopDispatchTween();
+            StopBeltDepleteSequence();
             StopSplineFollowing();
+            RestoreDefaultScale();
             activeBeltFacingYawOffset = beltFacingYawOffset;
             beltShotCooldown = 0f;
             activeFollowSpeed = -1f;
@@ -328,9 +332,8 @@ namespace PixelFlow.Runtime.Pigs
             beltShotCooldown = 0f;
             firedDuringCurrentCycle = false;
             SetState(PigState.DispatchingToBelt);
-            SetOnBelt(false);
+            HideTray();
             view?.SetBeltFacingMode(true);
-            Render();
 
             var resolvedDispatchDuration = dispatchDurationOverride > 0f
                 ? dispatchDurationOverride
@@ -448,6 +451,12 @@ namespace PixelFlow.Runtime.Pigs
             SetState(waitingAnchor != null
                 ? PigState.ReturningToWaiting
                 : PigState.Idle);
+            if (waitingAnchor != null)
+            {
+                HideTray();
+                return;
+            }
+
             SetOnBelt(false);
         }
 
@@ -487,6 +496,10 @@ namespace PixelFlow.Runtime.Pigs
         public void OnSpawned()
         {
             EnsureReferences();
+            StopDispatchTween();
+            StopBeltDepleteSequence();
+            StopSplineFollowing();
+            RestoreDefaultScale();
             view?.SetRenderersVisible(true);
             Render();
         }
@@ -496,15 +509,13 @@ namespace PixelFlow.Runtime.Pigs
             StopDispatchTween();
             StopBeltDepleteSequence();
             StopSplineFollowing();
-            transform.localPosition = defaultLocalPosition;
-            transform.localRotation = defaultLocalRotation;
-            transform.localScale = defaultLocalScale;
 
             if (resetParentOnDespawn && defaultParent != null && transform.parent != defaultParent)
             {
                 transform.SetParent(defaultParent, false);
             }
 
+            RestoreDefaultPose();
             ClearRuntimeState();
         }
 
@@ -514,6 +525,46 @@ namespace PixelFlow.Runtime.Pigs
             defaultLocalPosition = transform.localPosition;
             defaultLocalRotation = transform.localRotation;
             defaultLocalScale = transform.localScale;
+            defaultWorldScale = transform.lossyScale;
+        }
+
+        private void RestoreDefaultPose()
+        {
+            transform.localPosition = defaultLocalPosition;
+            transform.localRotation = defaultLocalRotation;
+            RestoreDefaultScale();
+        }
+
+        private void RestoreDefaultScale()
+        {
+            transform.localScale = ResolveLocalScaleForCurrentParent(
+                defaultWorldScale,
+                defaultLocalScale,
+                transform.parent);
+        }
+
+        private static Vector3 ResolveLocalScaleForCurrentParent(
+            Vector3 desiredWorldScale,
+            Vector3 fallbackLocalScale,
+            Transform parent)
+        {
+            if (parent == null)
+            {
+                return desiredWorldScale;
+            }
+
+            var parentScale = parent.lossyScale;
+            return new Vector3(
+                ResolveLocalScaleComponent(desiredWorldScale.x, parentScale.x, fallbackLocalScale.x),
+                ResolveLocalScaleComponent(desiredWorldScale.y, parentScale.y, fallbackLocalScale.y),
+                ResolveLocalScaleComponent(desiredWorldScale.z, parentScale.z, fallbackLocalScale.z));
+        }
+
+        private static float ResolveLocalScaleComponent(float desiredWorldScale, float parentScale, float fallbackLocalScale)
+        {
+            return Mathf.Abs(parentScale) > 0.0001f
+                ? desiredWorldScale / parentScale
+                : fallbackLocalScale;
         }
 
         private void CompleteDispatchTween()
@@ -585,7 +636,7 @@ namespace PixelFlow.Runtime.Pigs
             StopSplineFollowing();
             beltShotCooldown = 0f;
             SetState(PigState.Idle);
-            SetOnBelt(false);
+            HideTray();
             ConveyorLoopCompleted?.Invoke(this);
         }
 
@@ -656,6 +707,7 @@ namespace PixelFlow.Runtime.Pigs
         {
             if (waitingAnchor == null)
             {
+                SetOnBelt(false);
                 SetState(completedState == PigState.Queued
                     ? PigState.Idle
                     : completedState);
@@ -670,6 +722,11 @@ namespace PixelFlow.Runtime.Pigs
             {
                 if (State != completedState)
                 {
+                    if (completedState == PigState.Queued)
+                    {
+                        SetOnBelt(false);
+                    }
+
                     SetState(completedState);
                     if (completedState == PigState.Queued)
                     {

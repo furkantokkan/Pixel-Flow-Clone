@@ -7,7 +7,7 @@ using VContainer.Unity;
 namespace PixelFlow.Runtime.Composition
 {
     [DisallowMultipleComponent]
-    public sealed class ProjectLifetimeScope : LifetimeScope
+    public sealed partial class ProjectLifetimeScope : LifetimeScope
     {
         private static ProjectLifetimeScope instance;
 
@@ -31,12 +31,12 @@ namespace PixelFlow.Runtime.Composition
 
         private void Reset()
         {
-            TryAutoAssignAssets();
+            EditorAutoAssignAssets();
         }
 
         private void OnValidate()
         {
-            TryAutoAssignAssets();
+            EditorAutoAssignAssets();
             runtimeSettings?.Normalize();
         }
 
@@ -133,7 +133,7 @@ namespace PixelFlow.Runtime.Composition
 
         private void PrepareRegistrations()
         {
-            TryAutoAssignAssets();
+            EditorAutoAssignAssets();
 
             if (runtimeSettings == null)
             {
@@ -143,52 +143,6 @@ namespace PixelFlow.Runtime.Composition
             runtimeSettings.Normalize();
         }
 
-        private void TryAutoAssignAssets()
-        {
-#if UNITY_EDITOR
-            if (themeDatabase == null)
-            {
-                themeDatabase = FindFirstAsset<ThemeDatabase>();
-            }
-
-            if (defaultTheme == null)
-            {
-                defaultTheme = themeDatabase != null
-                    ? themeDatabase.GetDefaultTheme()
-                    : FindFirstAsset<Theme>();
-            }
-
-            if (defaultBlockData == null)
-            {
-                defaultBlockData = FindFirstAsset<BlockData>();
-            }
-
-            if (runtimeSettings == null)
-            {
-                runtimeSettings = FindFirstAsset<ProjectRuntimeSettings>();
-            }
-
-            if (levelDatabase == null)
-            {
-                levelDatabase = FindFirstAsset<LevelDatabase>();
-            }
-
-            runtimeSettings?.TryAutoAssignAssets();
-#endif
-        }
-
-#if UNITY_EDITOR
-        private static TAsset FindFirstAsset<TAsset>() where TAsset : UnityEngine.Object
-        {
-            var guids = UnityEditor.AssetDatabase.FindAssets($"t:{typeof(TAsset).Name}");
-            if (guids == null || guids.Length == 0)
-            {
-                return null;
-            }
-
-            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<TAsset>(path);
-        }
-#endif
+        partial void EditorAutoAssignAssets();
     }
 }

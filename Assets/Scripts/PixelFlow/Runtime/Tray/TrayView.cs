@@ -4,7 +4,7 @@ using UnityEngine;
 namespace PixelFlow.Runtime.Tray
 {
     [DisallowMultipleComponent]
-    public sealed class TrayView : MonoBehaviour
+    public sealed partial class TrayView : MonoBehaviour
     {
         private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorProperty = Shader.PropertyToID("_Color");
@@ -116,21 +116,9 @@ namespace PixelFlow.Runtime.Tray
 
         private void TryAutoAssignConfig()
         {
-#if UNITY_EDITOR
-            if (config != null)
-            {
-                return;
-            }
-
-            var configGuids = UnityEditor.AssetDatabase.FindAssets("t:TrayVisualConfig");
-            if (configGuids == null || configGuids.Length == 0)
-            {
-                return;
-            }
-
-            var configPath = UnityEditor.AssetDatabase.GUIDToAssetPath(configGuids[0]);
-            config = UnityEditor.AssetDatabase.LoadAssetAtPath<TrayVisualConfig>(configPath);
-#endif
+            EditorAutoAssignConfig();
         }
+
+        partial void EditorAutoAssignConfig();
     }
 }

@@ -66,6 +66,18 @@ namespace PixelFlow.Runtime.Visuals
             RefreshControlledRenderers();
         }
 
+        public bool IsRendererExcluded(Renderer rendererCandidate)
+        {
+            if (excludedRoot == null || rendererCandidate == null)
+            {
+                return false;
+            }
+
+            Transform candidateTransform = rendererCandidate.transform;
+            return candidateTransform == excludedRoot
+                || candidateTransform.IsChildOf(excludedRoot);
+        }
+
         protected override bool ShouldControlRenderer(Renderer rendererCandidate)
         {
             if (!base.ShouldControlRenderer(rendererCandidate))
@@ -78,9 +90,7 @@ namespace PixelFlow.Runtime.Visuals
                 return true;
             }
 
-            Transform candidateTransform = rendererCandidate.transform;
-            return candidateTransform != excludedRoot
-                && !candidateTransform.IsChildOf(excludedRoot);
+            return !IsRendererExcluded(rendererCandidate);
         }
 
         private void ApplyCurrentColor()

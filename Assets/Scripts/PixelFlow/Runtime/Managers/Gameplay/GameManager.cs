@@ -42,15 +42,8 @@ namespace PixelFlow.Runtime.Managers
         [SerializeField, Range(0f, 0.5f)] private float pigRendererViewportPadding = 0.18f;
         [SerializeField, Min(30)] private int targetFrameRate = 60;
 
-        private readonly List<PigController> queuedPigs = new();
-        private readonly List<PigController> holdingPigs = new();
-        private readonly List<TrayController> trayStackVisuals = new();
-        private readonly HashSet<PigController> pigsUsingTrayStack = new();
-        private readonly List<List<PigController>> waitingLanes = new();
+        private readonly GameManagerQueueRuntimeState queueState = new();
         private readonly List<PigController> trackedPigs = new();
-        private readonly Dictionary<PigController, int> pigLaneLookup = new();
-        private readonly Dictionary<PigController, int> pigHoldingLookup = new();
-        private readonly List<PigController> activeConveyorPigs = new();
 
         private EnvironmentContext environment;
         private SplineComputer dispatchSpline;
@@ -77,6 +70,15 @@ namespace PixelFlow.Runtime.Managers
         public event Action OutcomeStateChanged;
         public event Action<PigController> TrackedPigRegistered;
         public event Action<PigController> TrackedPigUnregistered;
+
+        private List<PigController> queuedPigs => queueState.QueuedPigs;
+        private List<PigController> holdingPigs => queueState.HoldingPigs;
+        private List<TrayController> trayStackVisuals => queueState.TrayStackVisuals;
+        private HashSet<PigController> pigsUsingTrayStack => queueState.PigsUsingTrayStack;
+        private List<List<PigController>> waitingLanes => queueState.WaitingLanes;
+        private Dictionary<PigController, int> pigLaneLookup => queueState.PigLaneLookup;
+        private Dictionary<PigController, int> pigHoldingLookup => queueState.PigHoldingLookup;
+        private List<PigController> activeConveyorPigs => queueState.ActiveConveyorPigs;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -582,26 +584,21 @@ namespace PixelFlow.Runtime.Managers
                     return;
                 }
 
-                var collaborators = collaboratorFactory.Create(
-                    queuedPigs,
-                    holdingPigs,
-                    trayStackVisuals,
-                    pigsUsingTrayStack,
-                    waitingLanes,
-                    pigLaneLookup,
-                    pigHoldingLookup,
-                    activeConveyorPigs,
-                    () => environment,
-                    () => QueueCapacity,
-                    () => ResolveLevelSessionController()?.ForceLevelFail(),
-                    TryDispatchBurstPigs,
-                    NotifyOutcomeStateChanged,
-                    UnregisterTrackedPig,
-                    SpawnPendingQueuedPig,
-                    ResolveTrayEquipPosition,
-                    ignoreTrayAvailability => DispatchNextPigToSpline(ignoreTrayAvailability),
-                    gameObject,
-                    () => sceneContext?.InputManager?.InputCamera);
+                var collaborators = collaboratorFactory.Create(new GameManagerCollaboratorContext
+                {
+                    QueueState = queueState,
+                    EnvironmentProvider = () => environment,
+                    QueueCapacityProvider = () => QueueCapacity,
+                    TriggerLevelFail = () => ResolveLevelSessionController()?.ForceLevelFail(),
+                    DispatchBurstPigs = TryDispatchBurstPigs,
+                    OutcomeStateChanged = NotifyOutcomeStateChanged,
+                    UnregisterTrackedPig = UnregisterTrackedPig,
+                    SpawnPendingPig = SpawnPendingQueuedPig,
+                    ResolveTrayEquipPosition = ResolveTrayEquipPosition,
+                    DispatchNextPig = ignoreTrayAvailability => DispatchNextPigToSpline(ignoreTrayAvailability),
+                    Owner = gameObject,
+                    GameplayCameraProvider = () => sceneContext?.InputManager?.InputCamera,
+                });
                 if (collaborators.TargetingCoordinator == null
                     || collaborators.TrayQueueCoordinator == null
                     || collaborators.VisibilityCoordinator == null

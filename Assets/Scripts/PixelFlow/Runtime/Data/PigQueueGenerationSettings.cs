@@ -126,9 +126,9 @@ namespace PixelFlow.Runtime.Data
                 maxAmmoPerPig = Mathf.Max(targetAmmoPerPig + (ammoStep * 2), minAmmoPerPig);
             }
 
-            minAmmoPerPig = SnapUpToStep(Mathf.Max(1, minAmmoPerPig), ammoStep);
-            maxAmmoPerPig = Mathf.Max(minAmmoPerPig, SnapUpToStep(Mathf.Max(1, maxAmmoPerPig), ammoStep));
-            targetAmmoPerPig = SnapToNearestStep(Mathf.Clamp(targetAmmoPerPig, minAmmoPerPig, maxAmmoPerPig), ammoStep);
+            minAmmoPerPig = AmmoStepUtility.SnapUpToStep(Mathf.Max(1, minAmmoPerPig), ammoStep);
+            maxAmmoPerPig = Mathf.Max(minAmmoPerPig, AmmoStepUtility.SnapUpToStep(Mathf.Max(1, maxAmmoPerPig), ammoStep));
+            targetAmmoPerPig = AmmoStepUtility.SnapToNearestStep(Mathf.Clamp(targetAmmoPerPig, minAmmoPerPig, maxAmmoPerPig), ammoStep);
             targetAmmoPerPig = Mathf.Clamp(targetAmmoPerPig, minAmmoPerPig, maxAmmoPerPig);
             minPigsPerColor = Mathf.Max(1, minPigsPerColor);
             maxDesiredPigsPerColor = Mathf.Max(minPigsPerColor, maxDesiredPigsPerColor);
@@ -158,22 +158,6 @@ namespace PixelFlow.Runtime.Data
         public static int ClampAmmoStep(int value)
         {
             return Mathf.Clamp(value, MinAmmoStep, MaxAmmoStep);
-        }
-
-        private static int SnapUpToStep(int value, int step)
-        {
-            var positiveStep = Mathf.Max(1, step);
-            var positiveValue = Mathf.Max(1, value);
-            return ((positiveValue + positiveStep - 1) / positiveStep) * positiveStep;
-        }
-
-        private static int SnapToNearestStep(int value, int step)
-        {
-            var positiveStep = Mathf.Max(1, step);
-            var positiveValue = Mathf.Max(1, value);
-            var lower = Mathf.Max(positiveStep, (positiveValue / positiveStep) * positiveStep);
-            var upper = SnapUpToStep(positiveValue, positiveStep);
-            return positiveValue - lower <= upper - positiveValue ? lower : upper;
         }
     }
 }

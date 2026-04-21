@@ -312,6 +312,7 @@ MonoBehaviour:
   colorIndexOverride: 2
   toneIndexOverride: 13
   enableOutline: 1
+  outlineWidthOverride: -1
   currentColor: 1
   currentToneIndex: 13
   excludedRoot: {fileID: 0}

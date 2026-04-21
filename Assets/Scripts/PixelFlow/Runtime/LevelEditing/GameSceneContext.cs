@@ -10,6 +10,9 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using VContainer;
 using VContainer.Unity;
+#if UNITY_EDITOR
+using PixelFlow.Runtime.EditorOnly;
+#endif
 
 namespace PixelFlow.Runtime.LevelEditing
 {
@@ -609,11 +612,10 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
 #if UNITY_EDITOR
-            var databaseGuids = UnityEditor.AssetDatabase.FindAssets("t:ThemeDatabase");
-            if (databaseGuids != null && databaseGuids.Length > 0)
+            var editorThemeDatabase = EditorAssetAutoWireUtility.FindFirstAsset<ThemeDatabase>();
+            if (editorThemeDatabase != null)
             {
-                var databasePath = UnityEditor.AssetDatabase.GUIDToAssetPath(databaseGuids[0]);
-                return UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeDatabase>(databasePath);
+                return editorThemeDatabase;
             }
 #endif
 
@@ -634,7 +636,7 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
 #if UNITY_EDITOR
-            return FindFirstAsset<BlockData>();
+            return EditorAssetAutoWireUtility.FindFirstAsset<BlockData>();
 #else
             return null;
 #endif
@@ -654,7 +656,7 @@ namespace PixelFlow.Runtime.LevelEditing
             }
 
 #if UNITY_EDITOR
-            return FindFirstAsset<LevelDatabase>();
+            return EditorAssetAutoWireUtility.FindFirstAsset<LevelDatabase>();
 #else
             return null;
 #endif
@@ -710,37 +712,14 @@ namespace PixelFlow.Runtime.LevelEditing
                 return;
             }
 
-            Container.Inject(this);
-
-            if (gameManager != null)
+            if (visualPoolService == null)
             {
-                Container.Inject(gameManager);
+                Container.TryResolve(out visualPoolService);
             }
 
-            if (inputManager != null)
+            if (gameFactory == null)
             {
-                Container.Inject(inputManager);
-            }
-
-            if (levelSessionController != null)
-            {
-                Container.Inject(levelSessionController);
-            }
-
-            try
-            {
-                visualPoolService ??= Container.Resolve<IVisualPoolService>();
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                gameFactory ??= Container.Resolve<IGameFactory>();
-            }
-            catch
-            {
+                Container.TryResolve(out gameFactory);
             }
         }
 
@@ -777,18 +756,5 @@ namespace PixelFlow.Runtime.LevelEditing
             builder.RegisterComponent(component);
         }
 
-#if UNITY_EDITOR
-        private static TAsset FindFirstAsset<TAsset>() where TAsset : UnityEngine.Object
-        {
-            var guids = UnityEditor.AssetDatabase.FindAssets($"t:{typeof(TAsset).Name}");
-            if (guids == null || guids.Length == 0)
-            {
-                return null;
-            }
-
-            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<TAsset>(path);
-        }
-#endif
     }
 }

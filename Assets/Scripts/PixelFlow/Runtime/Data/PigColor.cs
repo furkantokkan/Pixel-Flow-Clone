@@ -14,5 +14,6 @@ namespace PixelFlow.Runtime.Data
         Teal = 9,
         Gray = 10,
         White = 11,
+        DarkBlue = 12,
     }
 }

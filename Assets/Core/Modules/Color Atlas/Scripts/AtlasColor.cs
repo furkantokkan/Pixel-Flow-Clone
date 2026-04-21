@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Core.Runtime.ColorAtlas
 {
     // Values map directly to the atlas row used by the shader.
@@ -69,6 +71,30 @@ namespace Core.Runtime.ColorAtlas
             return toneIndex > MaxToneIndex
                 ? MaxToneIndex
                 : toneIndex;
+        }
+    }
+
+    public static class AtlasPreviewPaletteUtility
+    {
+        public static Color ResolveBaseColor(int colorIndex)
+        {
+            return AtlasPaletteConstants.ClampColorIndex(colorIndex) switch
+            {
+                1 => new Color32(188, 48, 48, 255),
+                2 => new Color32(210, 150, 195, 255),
+                3 => new Color32(110, 68, 156, 255),
+                4 => new Color32(173, 57, 173, 255),
+                5 => new Color32(0, 95, 191, 255),
+                6 => new Color32(48, 161, 172, 255),
+                9 => new Color32(74, 186, 82, 255),
+                10 => new Color32(54, 189, 54, 255),
+                11 => new Color32(191, 191, 63, 255),
+                12 => new Color32(188, 125, 40, 255),
+                13 => new Color32(177, 42, 42, 255),
+                14 => new Color32(128, 128, 132, 255),
+                15 => new Color32(200, 200, 200, 255),
+                _ => new Color32(184, 184, 188, 255),
+            };
         }
     }
 }

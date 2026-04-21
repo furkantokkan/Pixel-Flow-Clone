@@ -8,7 +8,7 @@ using UnityEngine;
 namespace PixelFlow.Runtime.Bullets
 {
     [DisallowMultipleComponent]
-    public sealed class BulletController : MonoBehaviour, IPoolable
+    public sealed partial class BulletController : MonoBehaviour, IPoolable
     {
         [SerializeField] private BulletConfig config;
         [SerializeField] private BulletView view;
@@ -165,6 +165,8 @@ namespace PixelFlow.Runtime.Bullets
 
         private void Complete()
         {
+            ReleaseTargetReservation();
+
             if (!model.IsActive)
             {
                 Completed?.Invoke(this);
@@ -174,6 +176,16 @@ namespace PixelFlow.Runtime.Bullets
             model.Expire();
             Render();
             Completed?.Invoke(this);
+        }
+
+        private void ReleaseTargetReservation()
+        {
+            if (targetBlock == null || targetBlock.IsDying)
+            {
+                return;
+            }
+
+            targetBlock.SetReserved(false);
         }
 
         private void Render()
@@ -209,21 +221,9 @@ namespace PixelFlow.Runtime.Bullets
 
         private void TryAutoAssignConfig()
         {
-#if UNITY_EDITOR
-            if (config != null)
-            {
-                return;
-            }
-
-            var configGuids = UnityEditor.AssetDatabase.FindAssets("t:BulletConfig");
-            if (configGuids == null || configGuids.Length == 0)
-            {
-                return;
-            }
-
-            var configPath = UnityEditor.AssetDatabase.GUIDToAssetPath(configGuids[0]);
-            config = UnityEditor.AssetDatabase.LoadAssetAtPath<BulletConfig>(configPath);
-#endif
+            EditorAutoAssignConfig();
         }
+
+        partial void EditorAutoAssignConfig();
     }
 }

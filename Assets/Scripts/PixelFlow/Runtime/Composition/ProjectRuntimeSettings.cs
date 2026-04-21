@@ -6,7 +6,7 @@ using UnityEngine;
 namespace PixelFlow.Runtime.Composition
 {
     [CreateAssetMenu(fileName = "ProjectRuntimeSettings", menuName = "Pixel Flow/Project Runtime Settings")]
-    public sealed class ProjectRuntimeSettings : ScriptableObject
+    public sealed partial class ProjectRuntimeSettings : ScriptableObject
     {
         [Header("Visual Pool")]
         [SerializeField] private PigController pigPrefab;
@@ -90,7 +90,6 @@ namespace PixelFlow.Runtime.Composition
             }
         }
 
-#if UNITY_EDITOR
         private void OnValidate()
         {
             TryAutoAssignAssets();
@@ -98,34 +97,10 @@ namespace PixelFlow.Runtime.Composition
 
         public void TryAutoAssignAssets()
         {
-            pigPrefab ??= FindPrefabComponent<PigController>("Pig");
-            blockPrefab ??= FindPrefabComponent<BlockVisual>("Block");
-            bulletPrefab ??= FindPrefabComponent<BulletController>("Bullet");
+            EditorAutoAssignAssets();
             Normalize();
         }
 
-        private static TComponent FindPrefabComponent<TComponent>(string prefabNameFilter)
-            where TComponent : Component
-        {
-            var prefabs = UnityEditor.AssetDatabase.FindAssets($"t:Prefab {prefabNameFilter}");
-            for (int i = 0; i < prefabs.Length; i++)
-            {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(prefabs[i]);
-                var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab == null)
-                {
-                    continue;
-                }
-
-                var component = prefab.GetComponentInChildren<TComponent>(true);
-                if (component != null)
-                {
-                    return component;
-                }
-            }
-
-            return null;
-        }
-#endif
+        partial void EditorAutoAssignAssets();
     }
 }

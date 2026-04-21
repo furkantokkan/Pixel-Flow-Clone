@@ -700,7 +700,7 @@ namespace PixelFlow.Editor.LevelEditing
 
         private static string GetPaletteLabel(PigColor color)
         {
-            return color == PigColor.None ? "Empty" : color.ToString();
+            return PigColorPaletteUtility.GetDisplayName(color);
         }
 
         private void DrawPigQueueTools()
@@ -2911,7 +2911,7 @@ namespace PixelFlow.Editor.LevelEditing
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.MinWidth(140f)))
             {
                 EditorGUILayout.LabelField($"{label}  #{queueIndex + 1}", EditorStyles.miniBoldLabel);
-                EditorGUILayout.LabelField(entry.Color.ToString(), EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(PigColorPaletteUtility.GetDisplayName(entry.Color), EditorStyles.miniLabel);
                 EditorGUILayout.LabelField($"Ammo: {entry.Ammo}", EditorStyles.miniLabel);
                 EditorGUILayout.LabelField($"Container: {entry.SlotIndex + 1}", EditorStyles.miniLabel);
             }
@@ -3118,7 +3118,7 @@ namespace PixelFlow.Editor.LevelEditing
 
             var drawRect = new Rect(swatchRect.x, swatchRect.y + 2f, 14f, 14f);
             EditorGUI.DrawRect(drawRect, swatchColor);
-            GUI.Label(new Rect(drawRect.x + 20f, swatchRect.y, 72f, EditorGUIUtility.singleLineHeight), color.ToString());
+            GUI.Label(new Rect(drawRect.x + 20f, swatchRect.y, 72f, EditorGUIUtility.singleLineHeight), PigColorPaletteUtility.GetDisplayName(color));
             GUILayout.Space(78f);
         }
 
@@ -3917,7 +3917,9 @@ namespace PixelFlow.Editor.LevelEditing
 
         private static string GetPigQueuePreviewColorLabel(PigColor color)
         {
-            var label = color.ToString();
+            var label = color == PigColor.DarkBlue
+                ? "DkBlu"
+                : PigColorPaletteUtility.GetDisplayName(color);
             return label.Length <= 5 ? label : label.Substring(0, 5);
         }
 

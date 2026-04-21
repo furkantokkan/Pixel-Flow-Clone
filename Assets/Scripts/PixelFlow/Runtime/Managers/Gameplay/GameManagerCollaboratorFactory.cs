@@ -22,61 +22,40 @@ namespace PixelFlow.Runtime.Managers
             this.soundService = soundService;
         }
 
-        internal GameManagerCollaborators Create(
-            List<PigController> queuedPigs,
-            List<PigController> holdingPigs,
-            List<TrayController> trayStackVisuals,
-            HashSet<PigController> pigsUsingTrayStack,
-            List<List<PigController>> waitingLanes,
-            Dictionary<PigController, int> pigLaneLookup,
-            Dictionary<PigController, int> pigHoldingLookup,
-            List<PigController> activeConveyorPigs,
-            Func<EnvironmentContext> environmentProvider,
-            Func<int> queueCapacityProvider,
-            Action triggerLevelFail,
-            Action tryDispatchBurstPigs,
-            Action outcomeStateChanged,
-            Action<PigController> unregisterTrackedPig,
-            Func<PigQueueEntry, int, PigController> spawnPendingPig,
-            Func<Vector3> resolveTrayEquipPosition,
-            Func<bool, PigController> dispatchNextPig,
-            GameObject owner,
-            Func<Camera> gameplayCameraProvider)
+        internal GameManagerCollaborators Create(GameManagerCollaboratorContext context)
         {
-            var targetingCoordinator = new GameManagerTargetingCoordinator(activeConveyorPigs, soundService);
+            if (context == null || context.QueueState == null)
+            {
+                return default;
+            }
+
+            var targetingCoordinator = new GameManagerTargetingCoordinator(context.QueueState, soundService);
             GameManagerBurstCoordinator burstCoordinator = null;
 
             var trayQueueCoordinator = new GameManagerTrayQueueCoordinator(
-                queuedPigs,
-                holdingPigs,
-                trayStackVisuals,
-                pigsUsingTrayStack,
-                waitingLanes,
-                pigLaneLookup,
-                pigHoldingLookup,
-                environmentProvider,
-                queueCapacityProvider,
-                () => targetingCoordinator.ActiveConveyorPigs,
+                context.QueueState,
+                context.EnvironmentProvider,
+                context.QueueCapacityProvider,
                 targetingCoordinator.RegisterConveyorPig,
                 targetingCoordinator.UnregisterConveyorPig,
                 pig =>
                 {
-                    unregisterTrackedPig?.Invoke(pig);
+                    context.UnregisterTrackedPig?.Invoke(pig);
                     gameFactory?.ReleasePig(pig);
                 },
-                triggerLevelFail,
-                tryDispatchBurstPigs,
-                outcomeStateChanged,
-                spawnPendingPig,
-                resolveTrayEquipPosition,
+                context.TriggerLevelFail,
+                context.DispatchBurstPigs,
+                context.OutcomeStateChanged,
+                context.SpawnPendingPig,
+                context.ResolveTrayEquipPosition,
                 soundService);
 
-            var visibilityCoordinator = new PigRendererVisibilityCoordinator(owner, gameplayCameraProvider);
+            var visibilityCoordinator = new PigRendererVisibilityCoordinator(
+                context.Owner,
+                context.GameplayCameraProvider);
             burstCoordinator = new GameManagerBurstCoordinator(
-                dispatchNextPig,
-                () => waitingLanes,
-                () => holdingPigs,
-                () => targetingCoordinator.ActiveConveyorPigs);
+                context.DispatchNextPig,
+                context.QueueState);
 
             return new GameManagerCollaborators(
                 targetingCoordinator,

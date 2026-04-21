@@ -64,7 +64,7 @@ namespace PixelFlow.Editor.LevelEditing
                 return Error("Guaranteed completion failed: some target blocks are permanently hidden behind blockers and never become exposed.");
             }
 
-            var remainingAmmoByColor = new int[(int)PigColor.White + 1];
+            var remainingAmmoByColor = new int[(int)PigColor.DarkBlue + 1];
             var totalAmmo = 0;
             for (int i = 0; i < pigQueue.Count; i++)
             {

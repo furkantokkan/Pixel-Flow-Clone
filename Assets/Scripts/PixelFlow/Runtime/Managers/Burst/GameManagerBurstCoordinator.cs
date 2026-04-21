@@ -9,9 +9,7 @@ namespace PixelFlow.Runtime.Managers
     internal sealed class GameManagerBurstCoordinator
     {
         private readonly Func<bool, PigController> dispatchNextPig;
-        private readonly Func<IReadOnlyList<List<PigController>>> waitingLanesProvider;
-        private readonly Func<IReadOnlyList<PigController>> holdingPigsProvider;
-        private readonly Func<IReadOnlyList<PigController>> activeConveyorPigsProvider;
+        private readonly GameManagerQueueRuntimeState queueState;
 
         private Tween burstRampTween;
         private float burstFollowSpeedMultiplier = 1f;
@@ -21,14 +19,10 @@ namespace PixelFlow.Runtime.Managers
 
         public GameManagerBurstCoordinator(
             Func<bool, PigController> dispatchNextPig,
-            Func<IReadOnlyList<List<PigController>>> waitingLanesProvider,
-            Func<IReadOnlyList<PigController>> holdingPigsProvider,
-            Func<IReadOnlyList<PigController>> activeConveyorPigsProvider)
+            GameManagerQueueRuntimeState queueState)
         {
             this.dispatchNextPig = dispatchNextPig;
-            this.waitingLanesProvider = waitingLanesProvider;
-            this.holdingPigsProvider = holdingPigsProvider;
-            this.activeConveyorPigsProvider = activeConveyorPigsProvider;
+            this.queueState = queueState;
         }
 
         public bool IsActive { get; private set; }
@@ -150,7 +144,9 @@ namespace PixelFlow.Runtime.Managers
 
         private void ApplyBurstModifiersToAllKnownPigs()
         {
-            var waitingLanes = waitingLanesProvider();
+            var waitingLanes = queueState != null
+                ? queueState.WaitingLanes
+                : null;
             if (waitingLanes != null)
             {
                 for (int laneIndex = 0; laneIndex < waitingLanes.Count; laneIndex++)
@@ -168,7 +164,9 @@ namespace PixelFlow.Runtime.Managers
                 }
             }
 
-            var holdingPigs = holdingPigsProvider();
+            var holdingPigs = queueState != null
+                ? queueState.HoldingPigs
+                : null;
             if (holdingPigs != null)
             {
                 for (int slotIndex = 0; slotIndex < holdingPigs.Count; slotIndex++)
@@ -177,7 +175,9 @@ namespace PixelFlow.Runtime.Managers
                 }
             }
 
-            var activeConveyorPigs = activeConveyorPigsProvider();
+            var activeConveyorPigs = queueState != null
+                ? queueState.ActiveConveyorPigs
+                : null;
             if (activeConveyorPigs == null)
             {
                 return;
@@ -201,7 +201,9 @@ namespace PixelFlow.Runtime.Managers
 
         private bool HasPigDispatchingToBelt()
         {
-            var activeConveyorPigs = activeConveyorPigsProvider();
+            var activeConveyorPigs = queueState != null
+                ? queueState.ActiveConveyorPigs
+                : null;
             if (activeConveyorPigs == null)
             {
                 return false;

@@ -8,7 +8,7 @@ using UnityEngine;
 namespace PixelFlow.Runtime.Visuals
 {
     [DisallowMultipleComponent]
-    public sealed class BlockVisual : MonoBehaviour, IPoolable
+    public sealed partial class BlockVisual : MonoBehaviour, IPoolable
     {
         [SerializeField] private BlockVisualConfig config;
         [SerializeField] private BlockView view;
@@ -302,21 +302,9 @@ namespace PixelFlow.Runtime.Visuals
 
         private void TryAutoAssignConfig()
         {
-#if UNITY_EDITOR
-            if (config != null)
-            {
-                return;
-            }
-
-            var configGuids = UnityEditor.AssetDatabase.FindAssets("t:BlockVisualConfig");
-            if (configGuids == null || configGuids.Length == 0)
-            {
-                return;
-            }
-
-            var configPath = UnityEditor.AssetDatabase.GUIDToAssetPath(configGuids[0]);
-            config = UnityEditor.AssetDatabase.LoadAssetAtPath<BlockVisualConfig>(configPath);
-#endif
+            EditorAutoAssignConfig();
         }
+
+        partial void EditorAutoAssignConfig();
     }
 }

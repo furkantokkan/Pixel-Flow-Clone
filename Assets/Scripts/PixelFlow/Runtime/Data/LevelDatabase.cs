@@ -20,6 +20,7 @@ namespace PixelFlow.Runtime.Data
         BlockTealBasic = 10,
         BlockGrayBasic = 11,
         BlockWhiteBasic = 12,
+        BlockDarkBlueBasic = 13,
     }
 
     public enum PlaceableKind
@@ -49,6 +50,7 @@ namespace PixelFlow.Runtime.Data
                 PigColor.Red => PlaceableId.BlockRedBasic,
                 PigColor.Pink => PlaceableId.BlockPinkBasic,
                 PigColor.Blue => PlaceableId.BlockBlueBasic,
+                PigColor.DarkBlue => PlaceableId.BlockDarkBlueBasic,
                 PigColor.Green => PlaceableId.BlockGreenBasic,
                 PigColor.Yellow => PlaceableId.BlockYellowBasic,
                 PigColor.Orange => PlaceableId.BlockOrangeBasic,
@@ -176,16 +178,16 @@ namespace PixelFlow.Runtime.Data
             {
                 displayName = kind == PlaceableKind.Obstacle
                     ? "Block"
-                    : $"{color} Block";
+                    : $"{PigColorPaletteUtility.GetDisplayName(color)} Block";
             }
             else if (kind == PlaceableKind.Obstacle && string.Equals(displayName, "Obstacle", StringComparison.OrdinalIgnoreCase))
             {
                 displayName = "Block";
             }
             else if (kind == PlaceableKind.Block
-                && string.Equals(displayName, $"{color} Pig", StringComparison.OrdinalIgnoreCase))
+                && string.Equals(displayName, $"{PigColorPaletteUtility.GetDisplayName(color)} Pig", StringComparison.OrdinalIgnoreCase))
             {
-                displayName = $"{color} Block";
+                displayName = $"{PigColorPaletteUtility.GetDisplayName(color)} Block";
             }
 
             gridSize = new Vector2Int(Mathf.Max(1, gridSize.x), Mathf.Max(1, gridSize.y));
@@ -353,6 +355,7 @@ namespace PixelFlow.Runtime.Data
             (PlaceableId.BlockRedBasic, "Red Block", PigColor.Red),
             (PlaceableId.BlockPinkBasic, "Pink Block", PigColor.Pink),
             (PlaceableId.BlockBlueBasic, "Blue Block", PigColor.Blue),
+            (PlaceableId.BlockDarkBlueBasic, "Dark Blue Block", PigColor.DarkBlue),
             (PlaceableId.BlockGreenBasic, "Green Block", PigColor.Green),
             (PlaceableId.BlockYellowBasic, "Yellow Block", PigColor.Yellow),
             (PlaceableId.BlockOrangeBasic, "Orange Block", PigColor.Orange),
