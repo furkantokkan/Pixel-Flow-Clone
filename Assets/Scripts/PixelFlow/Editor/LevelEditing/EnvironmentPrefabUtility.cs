@@ -1,10 +1,13 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
+using PixelFlow.Runtime.Composition;
+using PixelFlow.Runtime.Data;
 using PixelFlow.Runtime.LevelEditing;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using VContainer.Unity;
 
 namespace PixelFlow.Editor.LevelEditing
 {
@@ -190,6 +193,57 @@ namespace PixelFlow.Editor.LevelEditing
                 if (candidate != null)
                 {
                     return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        internal static Theme ResolveTheme(GameSceneContext sceneContext)
+        {
+            var environmentTheme = ResolveEnvironment(sceneContext)?.ResolveTheme();
+            if (environmentTheme != null)
+            {
+                return environmentTheme;
+            }
+
+            var projectScope = LifetimeScope.Find<ProjectLifetimeScope>() as ProjectLifetimeScope;
+            if (projectScope != null)
+            {
+                if (projectScope.DefaultTheme != null)
+                {
+                    return projectScope.DefaultTheme;
+                }
+
+                var projectDefaultTheme = projectScope.ThemeDatabase != null
+                    ? projectScope.ThemeDatabase.GetDefaultTheme()
+                    : null;
+                if (projectDefaultTheme != null)
+                {
+                    return projectDefaultTheme;
+                }
+            }
+
+            var databaseGuids = AssetDatabase.FindAssets($"t:{nameof(ThemeDatabase)}");
+            for (int i = 0; i < databaseGuids.Length; i++)
+            {
+                var databasePath = AssetDatabase.GUIDToAssetPath(databaseGuids[i]);
+                var database = AssetDatabase.LoadAssetAtPath<ThemeDatabase>(databasePath);
+                var defaultTheme = database != null ? database.GetDefaultTheme() : null;
+                if (defaultTheme != null)
+                {
+                    return defaultTheme;
+                }
+            }
+
+            var themeGuids = AssetDatabase.FindAssets($"t:{nameof(Theme)}");
+            for (int i = 0; i < themeGuids.Length; i++)
+            {
+                var themePath = AssetDatabase.GUIDToAssetPath(themeGuids[i]);
+                var theme = AssetDatabase.LoadAssetAtPath<Theme>(themePath);
+                if (theme != null)
+                {
+                    return theme;
                 }
             }
 

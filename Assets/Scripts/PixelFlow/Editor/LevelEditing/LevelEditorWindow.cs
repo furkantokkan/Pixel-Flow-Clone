@@ -171,7 +171,7 @@ namespace PixelFlow.Editor.LevelEditing
                     continue;
                 }
 
-                LevelPreviewService.ClearPreview(sceneContext, sceneContext.Theme);
+                LevelPreviewService.ClearPreview(sceneContext, SceneContextEnvironmentUtility.ResolveTheme(sceneContext));
                 var removedManagedEnvironment = SceneContextEnvironmentUtility.RemoveEditorManagedEnvironment(sceneContext);
 
                 sceneContext.InputManager?.RefreshInputCameraReference(preferSceneMain: true);
@@ -843,6 +843,27 @@ namespace PixelFlow.Editor.LevelEditing
             EditorGUILayout.LabelField(
                 $"Resolved Settings: pigs/color {GetMinimumPigsPerColor()}-{GetMaximumPigsPerColor()} | ammo {GetMinimumPigAmmo()}-{GetMaximumPigAmmo()}",
                 EditorStyles.miniLabel);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(selectedDatabase == null))
+                {
+                    if (GUILayout.Button("Regenerate Queue", GUILayout.Height(20f)))
+                    {
+                        RegenerateWorkingPigQueue();
+                    }
+                }
+
+                using (new EditorGUI.DisabledScope(selectedDatabase == null))
+                {
+                    if (GUILayout.Button("Validate", GUILayout.Height(20f)))
+                    {
+                        ValidateWorkingGuaranteedCompletion();
+                    }
+                }
+            }
+
+            EditorGUILayout.HelpBox(pigValidationMessage, pigValidationMessageType);
         }
 
         private void DrawGridSection()
@@ -1061,7 +1082,7 @@ namespace PixelFlow.Editor.LevelEditing
                 var size = definition.GridSize;
                 var blockColor = definition.Kind == PlaceableKind.Block ? definition.Color : PigColor.None;
                 var fallbackColor = definition.Kind == PlaceableKind.Block
-                    ? PigColorPaletteUtility.GetDisplayColor(definition.Color, workingImportSettings.PaletteEntries)
+                    ? ResolvePlacedObjectPreviewColor(definition, placedObject)
                     : definition.EditorColor;
 
                 for (int offsetX = 0; offsetX < size.x; offsetX++)
@@ -1142,7 +1163,7 @@ namespace PixelFlow.Editor.LevelEditing
                         ? environment.GetHoldingSlot(laneIndex, activeOnly: true) ?? environment.GetHoldingSlot(laneIndex, activeOnly: false)
                         : null;
                     var pigPrefab = ResolveTemporaryPigPrefab(entry.Color, preferGeneric: !Application.isPlaying);
-                    var fallbackColor = PigColorPaletteUtility.GetDisplayColor(entry.Color, workingImportSettings.PaletteEntries);
+                    var fallbackColor = ResolveBrushPreviewColor(entry.Color);
                     if (!TryInstantiateTemporaryPig(
                             deckRoot,
                             pigPrefab,
@@ -1326,7 +1347,15 @@ namespace PixelFlow.Editor.LevelEditing
             instance.transform.localPosition = localPosition;
             if (slotReference != null)
             {
-                instance.transform.rotation = slotReference.rotation;
+                var facingDirection = -slotReference.forward;
+                if (facingDirection.sqrMagnitude > 0.001f)
+                {
+                    instance.transform.rotation = Quaternion.LookRotation(facingDirection.normalized, Vector3.up);
+                }
+                else
+                {
+                    instance.transform.rotation = slotReference.rotation;
+                }
             }
 
             if (TryConfigureTemporaryPig(instance, entry, fallbackColor))
@@ -1467,11 +1496,12 @@ namespace PixelFlow.Editor.LevelEditing
             var fillColor = new Color(1f, 1f, 1f, 0.08f);
             string glyph = null;
 
-            if (TryResolvePlacedObject(placementIndex, out _, out var definition))
+            if (TryResolvePlacedObject(placementIndex, out var placedObject, out var definition))
             {
-                fillColor = definition.Kind == PlaceableKind.Obstacle
-                    ? new Color(definition.EditorColor.r, definition.EditorColor.g, definition.EditorColor.b, 0.92f)
-                    : new Color(definition.EditorColor.r, definition.EditorColor.g, definition.EditorColor.b, 0.82f);
+                fillColor = ResolvePlacedObjectPreviewColor(
+                    definition,
+                    placedObject,
+                    definition.Kind == PlaceableKind.Obstacle ? 0.92f : 0.82f);
                 glyph = isRoot ? definition.ResolveEditorGlyph() : null;
             }
 
@@ -1631,7 +1661,7 @@ namespace PixelFlow.Editor.LevelEditing
                         continue;
                     }
 
-                    var previewColor = GetPreviewColor(definition);
+                    var previewColor = GetPreviewColor(definition, placedObject);
                     var size = definition.GridSize;
                     for (int dx = 0; dx < size.x; dx++)
                     {
@@ -1720,17 +1750,50 @@ namespace PixelFlow.Editor.LevelEditing
             return cachedRootFlags[GetGridCacheIndex(x, y, cachedGridPreviewSize.x)];
         }
 
-        private static Color32 GetPreviewColor(PlaceableDefinition definition)
+        private Color32 GetPreviewColor(PlaceableDefinition definition, PlacedObjectData placedObject)
         {
-            var color = definition.Kind == PlaceableKind.Obstacle
-                ? new Color(definition.EditorColor.r, definition.EditorColor.g, definition.EditorColor.b, 0.98f)
-                : new Color(definition.EditorColor.r, definition.EditorColor.g, definition.EditorColor.b, 0.92f);
-            return color;
+            return ResolvePlacedObjectPreviewColor(
+                definition,
+                placedObject,
+                definition.Kind == PlaceableKind.Obstacle ? 0.98f : 0.92f);
+        }
+
+        private Color ResolvePlacedObjectPreviewColor(
+            PlaceableDefinition definition,
+            PlacedObjectData? placedObject = null,
+            float alpha = 1f)
+        {
+            if (definition == null)
+            {
+                return new Color(1f, 1f, 1f, alpha);
+            }
+
+            if (definition.Kind != PlaceableKind.Block || definition.Color == PigColor.None)
+            {
+                var fallbackColor = definition.EditorColor;
+                fallbackColor.a = alpha;
+                return fallbackColor;
+            }
+
+            var toneIndex = placedObject.HasValue
+                ? ResolvePlacedObjectToneIndex(placedObject.Value, definition.Color)
+                : PigColorAtlasUtility.ResolveDefaultToneIndex(definition.Color);
+            var previewColor = PigColorPaletteUtility.GetAtlasPreviewColor(definition.Color, toneIndex);
+            previewColor.a = alpha;
+            return previewColor;
+        }
+
+        private static Color ResolveBrushPreviewColor(PigColor color)
+        {
+            return color == PigColor.None
+                ? new Color(0.16f, 0.16f, 0.16f)
+                : PigColorPaletteUtility.GetAtlasPreviewColor(color);
         }
 
         private void InvalidateGridPreviewCache()
         {
             isGridPreviewDirty = true;
+            MarkPigGuaranteeValidationDirty();
         }
 
         private void EnsurePlacedObjectCapacity(int minimumCapacity)
@@ -1852,8 +1915,16 @@ namespace PixelFlow.Editor.LevelEditing
             SyncImportPaletteFromDatabase();
             ClampPlacedObjectsToGrid();
             InvalidateGridPreviewCache();
-            pigValidationMessage = "Pig queue loaded.";
-            pigValidationMessageType = MessageType.Info;
+            if (workingPigQueue.Count > 0 && workingPlacedObjects.Count > 0)
+            {
+                ValidateWorkingGuaranteedCompletion(updateStatusMessage: false);
+            }
+            else
+            {
+                pigValidationMessage = "Pig queue loaded.";
+                pigValidationMessageType = MessageType.Info;
+            }
+
             statusMessage = $"Loaded {workingLevelName}.";
             Repaint();
         }
@@ -1957,6 +2028,7 @@ namespace PixelFlow.Editor.LevelEditing
                 return;
             }
 
+            ValidateWorkingGuaranteedCompletion(updateStatusMessage: false);
             selectedDatabase.SetLevelAt(selectedLevelIndex, CreateWorkingLevelSnapshot());
             EditorUtility.SetDirty(selectedDatabase);
             AssetDatabase.SaveAssets();
@@ -2446,7 +2518,7 @@ namespace PixelFlow.Editor.LevelEditing
                 {
                     var hasPreviousEntry = previousEntries.TryGetValue(color, out var previousEntry);
                     var enabled = !hasPreviousEntry || previousEntry.Enabled;
-                    var displayColor = hasPreviousEntry ? previousEntry.DisplayColor : definition.EditorColor;
+                    var displayColor = hasPreviousEntry ? previousEntry.DisplayColor : ResolveBrushPreviewColor(color);
                     paletteEntries.Add(new PigColorPaletteEntry(color, displayColor, enabled));
                     continue;
                 }
@@ -2493,11 +2565,43 @@ namespace PixelFlow.Editor.LevelEditing
             workingPigQueue = PigQueueGenerator.Generate(workingPlacedObjects, selectedDatabase, pigQueueGenerationSettings);
             NormalizeWorkingPigQueueSlots();
             ResetPigQueueSelection();
-            pigValidationMessage = workingPigQueue.Count == 0
-                ? "No pigs were generated from the current cell matrix."
-                : "Pig queue regenerated from the current cell matrix.";
-            pigValidationMessageType = workingPigQueue.Count == 0 ? MessageType.Warning : MessageType.Info;
-            statusMessage = pigValidationMessage;
+            if (workingPigQueue.Count == 0)
+            {
+                pigValidationMessage = "No pigs were generated from the current cell matrix.";
+                pigValidationMessageType = MessageType.Warning;
+                statusMessage = pigValidationMessage;
+                return;
+            }
+
+            ValidateWorkingGuaranteedCompletion(updateStatusMessage: false);
+            statusMessage = $"Pig queue regenerated. {pigValidationMessage}";
+        }
+
+        private void ValidateWorkingGuaranteedCompletion(bool updateStatusMessage = true)
+        {
+            var validationResult = LevelGuaranteedCompletionValidator.Validate(
+                workingPlacedObjects,
+                selectedDatabase,
+                workingPigQueue);
+            pigValidationMessage = validationResult.Message;
+            pigValidationMessageType = validationResult.MessageType;
+            if (updateStatusMessage)
+            {
+                statusMessage = validationResult.Message;
+            }
+        }
+
+        private void MarkPigGuaranteeValidationDirty()
+        {
+            if (workingPigQueue == null || workingPigQueue.Count == 0)
+            {
+                pigValidationMessage = "Pig queue will be regenerated from the current grid when needed.";
+                pigValidationMessageType = MessageType.Info;
+                return;
+            }
+
+            pigValidationMessage = "Grid or pig queue changed. Run Validate to refresh the guaranteed-completion result.";
+            pigValidationMessageType = MessageType.Info;
         }
 
         private Dictionary<PigColor, int> CountPlacedPigCellsByColor()
@@ -2681,9 +2785,10 @@ namespace PixelFlow.Editor.LevelEditing
         private void DrawSelectedPigQueueSwapPanel()
         {
             var hasSelectionPair = TryGetSelectedPigQueuePair(out var primaryIndex, out var secondaryIndex);
-            var amount = Mathf.Max(GetAmmoStep(), pigQueueEditorState.SwapAmount);
-            amount = SnapDownToStep(amount, GetAmmoStep());
-            pigQueueEditorState.SwapAmount = amount;
+            var ammoStep = GetAmmoStep();
+            pigQueueEditorState.SwapAmount = Mathf.Max(
+                ammoStep,
+                SnapDownToStep(Mathf.Max(ammoStep, pigQueueEditorState.SwapAmount), ammoStep));
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
@@ -2701,9 +2806,12 @@ namespace PixelFlow.Editor.LevelEditing
 
                 var primaryEntry = workingPigQueue[primaryIndex];
                 var secondaryEntry = workingPigQueue[secondaryIndex];
+                var maxTransferFromPrimaryToSecondary = GetMaximumTransferAmountBetweenPair(primaryIndex, secondaryIndex);
+                var maxTransferFromSecondaryToPrimary = GetMaximumTransferAmountBetweenPair(secondaryIndex, primaryIndex);
+                var maximumTransferAmount = Mathf.Max(maxTransferFromPrimaryToSecondary, maxTransferFromSecondaryToPrimary);
 
                 EditorGUILayout.LabelField(
-                    $"Selected {primaryEntry.Color} pigs. Transfer ammo between A and B in multiples of {GetAmmoStep()}.",
+                    $"Selected {primaryEntry.Color} pigs. Transfer ammo between A and B in multiples of {ammoStep}.",
                     EditorStyles.wordWrappedMiniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -2713,8 +2821,45 @@ namespace PixelFlow.Editor.LevelEditing
                     DrawSelectedPigQueueEntrySummary("B", secondaryIndex, secondaryEntry);
                 }
 
-                pigQueueEditorState.SwapAmount = EditorGUILayout.DelayedIntField("Transfer Amount", pigQueueEditorState.SwapAmount);
-                pigQueueEditorState.SwapAmount = Mathf.Max(GetAmmoStep(), SnapDownToStep(Mathf.Max(GetAmmoStep(), pigQueueEditorState.SwapAmount), GetAmmoStep()));
+                var hasAnyTransfer = maximumTransferAmount >= ammoStep;
+                if (hasAnyTransfer)
+                {
+                    pigQueueEditorState.SwapAmount = Mathf.Clamp(
+                        SnapDownToStep(pigQueueEditorState.SwapAmount, ammoStep),
+                        ammoStep,
+                        maximumTransferAmount);
+                }
+                else
+                {
+                    pigQueueEditorState.SwapAmount = 0;
+                }
+
+                using (new EditorGUI.DisabledScope(!hasAnyTransfer))
+                {
+                    var nextTransferAmount = EditorGUILayout.IntSlider(
+                        "Transfer Amount",
+                        pigQueueEditorState.SwapAmount,
+                        hasAnyTransfer ? ammoStep : 0,
+                        hasAnyTransfer ? maximumTransferAmount : 0);
+
+                    pigQueueEditorState.SwapAmount = hasAnyTransfer
+                        ? Mathf.Clamp(
+                            SnapDownToStep(nextTransferAmount, ammoStep),
+                            ammoStep,
+                            maximumTransferAmount)
+                        : 0;
+                }
+
+                if (!hasAnyTransfer)
+                {
+                    EditorGUILayout.HelpBox(
+                        BuildAmmoTransferUnavailableMessage(primaryEntry, secondaryEntry),
+                        MessageType.Info);
+                }
+
+                EditorGUILayout.LabelField(
+                    $"A -> B max: {maxTransferFromPrimaryToSecondary}   B -> A max: {maxTransferFromSecondaryToPrimary}",
+                    EditorStyles.miniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -3134,6 +3279,7 @@ namespace PixelFlow.Editor.LevelEditing
                 }
 
                 workingPigQueue[entryIndex] = new PigQueueEntry(targetEntry.Color, targetEntry.Ammo + actualDelta, targetEntry.SlotIndex, targetEntry.Direction);
+                MarkPigGuaranteeValidationDirty();
                 return true;
             }
 
@@ -3174,6 +3320,7 @@ namespace PixelFlow.Editor.LevelEditing
             }
 
             workingPigQueue[entryIndex] = new PigQueueEntry(targetEntry.Color, targetEntry.Ammo - actualDelta, targetEntry.SlotIndex, targetEntry.Direction);
+            MarkPigGuaranteeValidationDirty();
             return true;
         }
 
@@ -3203,6 +3350,47 @@ namespace PixelFlow.Editor.LevelEditing
                 && toEntry.Ammo + transferAmount <= GetMaximumPigAmmo();
         }
 
+        private int GetMaximumTransferAmountBetweenPair(int fromIndex, int toIndex)
+        {
+            if (!IsValidPigQueueIndex(fromIndex)
+                || !IsValidPigQueueIndex(toIndex)
+                || fromIndex == toIndex)
+            {
+                return 0;
+            }
+
+            var fromEntry = workingPigQueue[fromIndex];
+            var toEntry = workingPigQueue[toIndex];
+            if (fromEntry.Color == PigColor.None || fromEntry.Color != toEntry.Color)
+            {
+                return 0;
+            }
+
+            var ammoStep = GetAmmoStep();
+            var transferableFromSource = fromEntry.Ammo - GetMinimumPigAmmo();
+            var receivableByTarget = GetMaximumPigAmmo() - toEntry.Ammo;
+            var maximumTransfer = Mathf.Min(transferableFromSource, receivableByTarget);
+            if (maximumTransfer < ammoStep)
+            {
+                return 0;
+            }
+
+            return SnapDownToStep(maximumTransfer, ammoStep);
+        }
+
+        private string BuildAmmoTransferUnavailableMessage(PigQueueEntry primaryEntry, PigQueueEntry secondaryEntry)
+        {
+            var minimumAmmo = GetMinimumPigAmmo();
+            var maximumAmmo = GetMaximumPigAmmo();
+
+            if (primaryEntry.Ammo == secondaryEntry.Ammo)
+            {
+                return $"A and B are both {primaryEntry.Ammo} ammo. Allowed ammo range is {minimumAmmo}-{maximumAmmo}, so no transfer is possible between equal values here.";
+            }
+
+            return $"A has {primaryEntry.Ammo} ammo and B has {secondaryEntry.Ammo}. Allowed ammo range is {minimumAmmo}-{maximumAmmo}, so any transfer would break the configured limits.";
+        }
+
         private bool TransferAmmoBetweenPair(int fromIndex, int toIndex, int requestedAmount)
         {
             if (!CanTransferAmmoBetweenPair(fromIndex, toIndex, requestedAmount))
@@ -3224,6 +3412,7 @@ namespace PixelFlow.Editor.LevelEditing
                 toEntry.Ammo + transferAmount,
                 toEntry.SlotIndex,
                 toEntry.Direction);
+            MarkPigGuaranteeValidationDirty();
             return true;
         }
 
@@ -3330,6 +3519,7 @@ namespace PixelFlow.Editor.LevelEditing
 
             ClearPigQueueSelection();
             NormalizeWorkingPigQueueSlots();
+            MarkPigGuaranteeValidationDirty();
             return true;
         }
 
@@ -3348,6 +3538,7 @@ namespace PixelFlow.Editor.LevelEditing
             workingPigQueue[secondIndex] = firstEntry;
             ClearPigQueueSelection();
             NormalizeWorkingPigQueueSlots();
+            MarkPigGuaranteeValidationDirty();
             return true;
         }
 
@@ -3868,10 +4059,10 @@ namespace PixelFlow.Editor.LevelEditing
 
             if (TryResolvePigBrush(color, out var definition))
             {
-                return definition.EditorColor;
+                return ResolveBrushPreviewColor(color);
             }
 
-            return PigColorPaletteUtility.GetDisplayColor(color);
+            return ResolveBrushPreviewColor(color);
         }
 
         private LevelData GetSelectedLevel()

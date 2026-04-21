@@ -144,7 +144,7 @@ namespace PixelFlow.Editor.LevelEditing
                     continue;
                 }
 
-                LevelPreviewService.ClearPreview(sceneContext, sceneContext.Theme);
+                LevelPreviewService.ClearPreview(sceneContext, SceneContextEnvironmentUtility.ResolveTheme(sceneContext));
             }
 
             var transforms = Resources.FindObjectsOfTypeAll<Transform>();
@@ -178,44 +178,7 @@ namespace PixelFlow.Editor.LevelEditing
 
         private static Theme ResolveGenerationTheme(GameSceneContext sceneContext)
         {
-            if (sceneContext?.Theme != null)
-            {
-                return sceneContext.Theme;
-            }
-
-            if (sceneContext?.ThemeDatabase != null)
-            {
-                var defaultTheme = sceneContext.ThemeDatabase.GetDefaultTheme();
-                if (defaultTheme != null)
-                {
-                    return defaultTheme;
-                }
-            }
-
-            var databaseGuids = AssetDatabase.FindAssets("t:ThemeDatabase");
-            for (int i = 0; i < databaseGuids.Length; i++)
-            {
-                var databasePath = AssetDatabase.GUIDToAssetPath(databaseGuids[i]);
-                var database = AssetDatabase.LoadAssetAtPath<ThemeDatabase>(databasePath);
-                var defaultTheme = database != null ? database.GetDefaultTheme() : null;
-                if (defaultTheme != null)
-                {
-                    return defaultTheme;
-                }
-            }
-
-            var themeGuids = AssetDatabase.FindAssets("t:Theme");
-            for (int i = 0; i < themeGuids.Length; i++)
-            {
-                var themePath = AssetDatabase.GUIDToAssetPath(themeGuids[i]);
-                var theme = AssetDatabase.LoadAssetAtPath<Theme>(themePath);
-                if (theme != null)
-                {
-                    return theme;
-                }
-            }
-
-            return null;
+            return SceneContextEnvironmentUtility.ResolveTheme(sceneContext);
         }
 
         private static void AlignTemporaryRoot(Transform target, Transform reference)

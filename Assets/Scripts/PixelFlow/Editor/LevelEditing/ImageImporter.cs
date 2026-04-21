@@ -238,7 +238,6 @@ namespace PixelFlow.Editor.LevelEditing
                     KMeansQuantize(paletteSourcePixels, clusterCount, out clusterCentroids, out var clusterAssignments);
                     MergeSmallClusters(paletteSourcePixels, clusterCentroids, clusterAssignments);
                     clusterPigColors = ResolveClusterColors(clusterCentroids, clusterAssignments, enabledPaletteEntries);
-                    ApplyResolvedClusterDisplayColors(clusterCentroids, clusterAssignments, clusterPigColors, settings.PaletteEntries);
                 }
             }
 
@@ -321,13 +320,27 @@ namespace PixelFlow.Editor.LevelEditing
                     continue;
                 }
 
+                var displayColor = entry.DisplayColor;
+                if (IsUnsetPaletteDisplayColor(displayColor))
+                {
+                    displayColor = PigColorPaletteUtility.GetDisplayColor(entry.Color);
+                }
+
                 matchingEntries.Add(new PigColorPaletteEntry(
                     entry.Color,
-                    PigColorPaletteUtility.GetDisplayColor(entry.Color),
+                    displayColor,
                     entry.Enabled));
             }
 
             return matchingEntries;
+        }
+
+        private static bool IsUnsetPaletteDisplayColor(Color color)
+        {
+            return Mathf.Approximately(color.r, 0f)
+                && Mathf.Approximately(color.g, 0f)
+                && Mathf.Approximately(color.b, 0f)
+                && Mathf.Approximately(color.a, 0f);
         }
 
         private static Color[] CollectPaletteSourcePixels(Texture2D sourceTexture, float alphaThreshold)
