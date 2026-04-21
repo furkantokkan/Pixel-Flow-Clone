@@ -1,12 +1,5 @@
 fileFormatVersion: 2
-guid: b8355fb294513424ea9ecd96ce8c09fd
-AssetOrigin:
-  serializedVersion: 1
-  productId: 154253
-  packageName: Pixel Shooter 3D | Jam Template + Editor
-  packageVersion: 2.0
-  assetPath: Assets/Pixel Shooter 3D/Models/Cubic_Dog.fbx
-  uploadId: 885442
+guid: dc1f99eee92919e42a7f078420b64cea
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -23,6 +16,8 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -102,9 +97,9 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 0
+  animationType: 2
   humanoidOversampling: 1
-  avatarSetup: 0
+  avatarSetup: 1
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
   importBlendShapeDeformPercent: 1
   remapMaterialsIfMaterialImportModeIsNone: 0
@@ -112,3 +107,10 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 372830
+  packageName: Free Cube Pig Cute Pro Series
+  packageVersion: 1.0
+  assetPath: Assets/Free Cube Pig Cute Pro Series/FBX/No Root/Pig.fbx
+  uploadId: 897740

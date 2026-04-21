@@ -1,12 +1,5 @@
 fileFormatVersion: 2
-guid: b8355fb294513424ea9ecd96ce8c09fd
-AssetOrigin:
-  serializedVersion: 1
-  productId: 154253
-  packageName: Pixel Shooter 3D | Jam Template + Editor
-  packageVersion: 2.0
-  assetPath: Assets/Pixel Shooter 3D/Models/Cubic_Dog.fbx
-  uploadId: 885442
+guid: 9dbce58965b04d246a836142ac0431bb
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -102,7 +95,7 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 0
+  animationType: 2
   humanoidOversampling: 1
   avatarSetup: 0
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1

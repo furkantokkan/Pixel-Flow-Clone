@@ -3,9 +3,9 @@ Shader "Core/ColorAtlasPicker"
     Properties
     {
         _ColorAtlas ("Color Atlas", 2D) = "white" {}
-        _ColorIndex ("Color (Vertical)", Range(0, 15)) = 0
-        _ToneIndex ("Tone (Horizontal)", Range(0, 15)) = 0
-        [Toggle] _EnableOutline ("Enable Outline", Float) = 1
+        [PerRendererData] _ColorIndex ("Color (Vertical)", Range(0, 15)) = 0
+        [PerRendererData] _ToneIndex ("Tone (Horizontal)", Range(0, 15)) = 0
+        [PerRendererData][Toggle] _EnableOutline ("Enable Outline", Float) = 1
         _OutlineColor ("Outline Color", Color) = (0.12,0.14,0.18,1)
         _OutlineWidth ("Outline Width", Range(0, 0.1)) = 0.02
         _Brightness ("Brightness", Range(0, 2)) = 1
@@ -28,68 +28,6 @@ Shader "Core/ColorAtlasPicker"
 
         Pass
         {
-            Name "Outline"
-            Tags { "LightMode" = "SRPDefaultUnlit" }
-
-            Cull Front
-            ZWrite Off
-            ZTest LEqual
-
-            HLSLPROGRAM
-            #pragma target 3.0
-            #pragma vertex Vert
-            #pragma fragment Frag
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
-            TEXTURE2D(_ColorAtlas);
-            SAMPLER(sampler_ColorAtlas);
-
-            CBUFFER_START(UnityPerMaterial)
-                float4 _OutlineColor;
-                float _OutlineWidth;
-                float _Brightness;
-                float _Saturation;
-                float _ColorIndex;
-                float _ToneIndex;
-                float _EnableOutline;
-                float _ShadeStrength;
-                float _BandSoftness;
-                float _RimStrength;
-                float _RimPower;
-                float _TopHighlight;
-            CBUFFER_END
-
-            struct Attributes
-            {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-            };
-
-            struct Varyings
-            {
-                float4 positionHCS : SV_POSITION;
-            };
-
-            Varyings Vert(Attributes input)
-            {
-                Varyings output;
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                float3 normalWS = normalize(TransformObjectToWorldNormal(input.normalOS));
-                float3 expandedPositionWS = positionWS + normalWS * (_OutlineWidth * _EnableOutline);
-                output.positionHCS = TransformWorldToHClip(expandedPositionWS);
-                return output;
-            }
-
-            half4 Frag(Varyings input) : SV_Target
-            {
-                return half4(_OutlineColor.rgb, 1.0h) * _EnableOutline;
-            }
-            ENDHLSL
-        }
-
-        Pass
-        {
             Name "Main"
             Tags { "LightMode" = "UniversalForward" }
 
@@ -101,6 +39,7 @@ Shader "Core/ColorAtlasPicker"
             #pragma target 3.0
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -112,9 +51,6 @@ Shader "Core/ColorAtlasPicker"
                 float _OutlineWidth;
                 float _Brightness;
                 float _Saturation;
-                float _ColorIndex;
-                float _ToneIndex;
-                float _EnableOutline;
                 float _ShadeStrength;
                 float _BandSoftness;
                 float _RimStrength;
@@ -122,10 +58,16 @@ Shader "Core/ColorAtlasPicker"
                 float _TopHighlight;
             CBUFFER_END
 
+            UNITY_INSTANCING_BUFFER_START(PerInstance)
+                UNITY_DEFINE_INSTANCED_PROP(float, _ColorIndex)
+                UNITY_DEFINE_INSTANCED_PROP(float, _ToneIndex)
+            UNITY_INSTANCING_BUFFER_END(PerInstance)
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -133,6 +75,8 @@ Shader "Core/ColorAtlasPicker"
                 float4 positionHCS : SV_POSITION;
                 float3 normalWS : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
+                float colorIndex : TEXCOORD2;
+                float toneIndex : TEXCOORD3;
             };
 
             half ResolveToonBand(half ndotl, half softness)
@@ -150,10 +94,13 @@ Shader "Core/ColorAtlasPicker"
             Varyings Vert(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 output.positionHCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
                 output.normalWS = normalize(TransformObjectToWorldNormal(input.normalOS));
+                output.colorIndex = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _ColorIndex);
+                output.toneIndex = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _ToneIndex);
                 return output;
             }
 
@@ -163,8 +110,8 @@ Shader "Core/ColorAtlasPicker"
                 const half cellCenter = 0.03125h;
 
                 half2 atlasUV = half2(
-                    _ToneIndex * invGridSize + cellCenter,
-                    _ColorIndex * invGridSize + cellCenter);
+                    input.toneIndex * invGridSize + cellCenter,
+                    input.colorIndex * invGridSize + cellCenter);
 
                 half4 colorSample = SAMPLE_TEXTURE2D(_ColorAtlas, sampler_ColorAtlas, atlasUV);
                 colorSample.rgb *= _Brightness;
